@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сроки по этапам</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --navy:#2b3142; --cyan:#00cbff;
+  --bg:#f3f5f8; --surface:#ffffff; --surface-2:#eef1f5; --line:#e3e7ee;
+  --text:#2b3142; --text-2:#5b6274; --text-3:#8a90a0;
+  --accent:#0089b8;
+  --bar:#2b3142; --bar-hot:#00a9d9; --bar-norm:#b9c0cf;
+  --tag-bg:#d9f6ff; --tag-tx:#0b5878;
+  --b1:#00a9d9; --b2:#0089b8; --b3:#0b6a92; --b4:#1b4b6e; --b5:#2b3142;
+  --h1:#e3f8ff; --h2:#9fe7ff; --h3:#00cbff; --h4:#0b6a92; --h5:#2b3142;
+  --hm-ink:#ffffff; --hm0:#eef1f5;
+  --crit:#d03b3b;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#1f2432; --surface:#2b3142; --surface-2:#353c50; --line:#3b4257;
+    --text:#f1f3f7; --text-2:#c2c7d3; --text-3:#8e95a7;
+    --accent:#00cbff;
+    --bar:#0089b8; --bar-hot:#00cbff; --bar-norm:#5b6680;
+    --tag-bg:#0b4a63; --tag-tx:#bdf0ff;
+    --b1:#0b6a92; --b2:#0089b8; --b3:#00a9d9; --b4:#00cbff; --b5:#9fe7ff;
+    --h1:#353c50; --h2:#1b4b6e; --h3:#0089b8; --h4:#00cbff; --h5:#9fe7ff;
+    --hm0:#353c50; --hm-ink:#2b3142;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#1f2432; --surface:#2b3142; --surface-2:#353c50; --line:#3b4257;
+  --text:#f1f3f7; --text-2:#c2c7d3; --text-3:#8e95a7;
+  --accent:#00cbff;
+  --bar:#0089b8; --bar-hot:#00cbff; --bar-norm:#5b6680;
+  --tag-bg:#0b4a63; --tag-tx:#bdf0ff;
+  --b1:#0b6a92; --b2:#0089b8; --b3:#00a9d9; --b4:#00cbff; --b5:#9fe7ff;
+  --h1:#353c50; --h2:#1b4b6e; --h3:#0089b8; --h4:#00cbff; --h5:#9fe7ff;
+  --hm0:#353c50; --hm-ink:#2b3142;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Manrope,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.hero{background:var(--navy);color:#fff;position:relative;overflow:hidden}
+.hero .in{max-width:1180px;margin:0 auto;padding:22px 16px 26px;position:relative}
+.hero .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:26px}
+.hero img{height:26px;width:auto;display:block}
+.hero .theme{border-color:rgba(255,255,255,.22);background:transparent;color:#d7dbe4}
+.hero h1{font-size:30px;line-height:1.15;margin:0 0 8px;font-weight:700;letter-spacing:-.015em}
+.hero h1 em{font-style:normal;color:var(--cyan)}
+.hero .sub{color:#aeb4c2;font-size:13.5px}
+.rays{position:absolute;right:24px;bottom:18px;width:180px;opacity:.16;pointer-events:none}
+@media (max-width:820px){.rays{display:none}}
+:root[data-theme="dark"] .kpi.hot{border-color:var(--cyan)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .kpi.hot{border-color:var(--cyan)}}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 64px}
+h2{font-size:17px;margin:0 0 3px;font-weight:700;letter-spacing:-.005em}
+.hint{color:var(--text-3);font-size:12.5px;margin:0 0 14px}
+.filters{position:sticky;top:0;z-index:5;background:var(--surface);padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;margin:-18px 0 18px;box-shadow:0 6px 18px rgba(43,49,66,.08)}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--text-2);font:inherit;font-weight:600;padding:6px 16px;border-radius:8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+:root[data-theme="dark"] .seg button[aria-pressed="true"]{background:var(--cyan);color:var(--navy)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .seg button[aria-pressed="true"]{background:var(--cyan);color:var(--navy)}}
+select,input[type=date]{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px;min-height:34px}
+select:focus,input:focus,button:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+label.f{display:inline-flex;align-items:center;gap:6px;color:var(--text-2);font-size:13px}
+.theme{border:1px solid var(--line);background:var(--surface);color:var(--text-2);border-radius:10px;padding:6px 12px;font:inherit;cursor:pointer}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;position:relative}
+.kpi::before{content:"";position:absolute;left:18px;top:0;width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--cyan)}
+.kpi .l{color:var(--text-2);font-size:12.5px;font-weight:500}
+.kpi .v{font-size:28px;font-weight:700;letter-spacing:-.015em;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .s{color:var(--text-3);font-size:12px;margin-top:2px}
+.kpi.hot{background:var(--navy);border-color:var(--navy);color:#fff}
+.kpi.hot .l{color:#aeb4c2}.kpi.hot .s{color:#aeb4c2}
+.kpi.hot .v{color:var(--cyan)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 20px 16px;margin-bottom:16px}
+.rows{display:grid;grid-template-columns:minmax(150px,210px) 1fr minmax(240px,300px);gap:6px 14px;align-items:center}
+.rows .h{color:var(--text-3);font-size:12px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.stage{font-weight:600;display:flex;align-items:center;gap:6px;min-width:0}
+.stage span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{flex:none;font-style:normal;font-size:11px;font-weight:700;color:var(--tag-tx);background:var(--tag-bg);border-radius:999px;padding:1px 8px}
+.track{position:relative;height:22px;display:flex;align-items:center;gap:8px;min-width:0}
+.bar{height:14px;flex:none;border-radius:0 4px 4px 0;background:var(--bar);min-width:2px}
+.bar.hot{background:var(--bar-hot)}
+.tag.norm{color:var(--text-2);background:var(--surface-2)}
+.bv{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.meta{color:var(--text-2);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta b{color:var(--text);font-weight:700}
+.stack{display:flex;gap:2px;height:16px;flex:1;min-width:0}
+.stack i{display:block;height:100%}
+.stack i:last-child{border-radius:0 4px 4px 0}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 12px;color:var(--text-2);font-size:12.5px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-size:13px}
+th{color:var(--text-3);font-weight:600;font-size:12px}
+td.n,th.n{text-align:right}
+a{color:var(--accent);text-decoration:none;font-weight:600}
+a:hover{text-decoration:underline}
+.over{color:var(--crit);font-weight:700}
+.hm{overflow-x:auto}
+.hm table{min-width:720px}
+.hm td.c{text-align:center;font-weight:600;padding:6px 4px;border:2px solid var(--surface);border-radius:6px}
+.hm th.st{font-size:11.5px;text-align:center;line-height:1.2;vertical-align:bottom;min-width:62px}
+.muted{color:var(--text-3)}
+.empty{color:var(--text-3);padding:12px 0}
+#tip{position:fixed;pointer-events:none;z-index:50;background:var(--navy);color:#fff;font-size:12.5px;padding:8px 11px;border-radius:10px;max-width:280px;opacity:0;transition:opacity .08s;white-space:pre-line;border-left:3px solid var(--cyan);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.foot{color:var(--text-3);font-size:12px;margin-top:18px}
+@media (max-width:820px){
+  .filters{position:static}
+  .rows{grid-template-columns:1fr;gap:2px}
+  .rows .h{display:none}
+  .rows .meta{margin-bottom:10px}
+  .grid2{grid-template-columns:1fr}
+  .hero h1{font-size:24px}
+}
+.lock{position:relative;z-index:2;max-width:420px;margin:-18px auto 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 6px 18px rgba(43,49,66,.08)}
+.lock h2{margin-bottom:6px}
+.lock form{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+.lock input[type=password]{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.lock .row{display:flex;align-items:center;gap:8px;color:var(--text-2);font-size:13px}
+.lock button[type=submit]{font:inherit;font-weight:700;border:0;border-radius:10px;padding:10px 14px;background:var(--navy);color:#fff;cursor:pointer}
+.lock button[type=submit]:disabled{opacity:.6;cursor:wait}
+.lock .err{color:var(--crit);font-size:13px;min-height:18px}
+.logout{border:0;background:none;color:var(--text-3);font:inherit;font-size:12px;cursor:pointer;padding:0;text-decoration:underline}
+[hidden]{display:none!important}
+
+.tabs{display:inline-flex;gap:4px;margin-top:18px;background:rgba(255,255,255,.08);border-radius:12px;padding:4px}
+.tabs button{border:0;background:transparent;color:#c9cedb;font:inherit;font-weight:600;padding:8px 16px;border-radius:9px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:#fff;color:var(--navy)}
+.tabs button:focus-visible{outline:2px solid var(--cyan);outline-offset:1px}
+.hero .in{padding-bottom:40px}
+input[type=search]{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 10px;min-height:34px;min-width:200px}
+.btn2{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:10px;padding:6px 12px;cursor:pointer}
+.btn2:hover{border-color:var(--accent)}
+.none-fill{background:repeating-linear-gradient(135deg,var(--hm0) 0 3px,var(--text-3) 3px 4px)}
+.tbl-wrap{overflow-x:auto}
+.tbl-wrap table{min-width:860px}
+td.who{max-width:240px}
+td.who .c2{color:var(--text-3);font-size:12px}
+.badge0{font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px;background:var(--surface-2);color:var(--text-2);white-space:nowrap}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="hero"><div class="in">
+  <div class="top"><img src="data:image/png;base64,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" alt="Solar Staff"><button class="theme" id="theme" type="button">Тема</button></div>
+  <h1 id="title">Сроки по этапам <em>воронки</em></h1>
+  <div class="sub" id="sub">Загрузка…</div>
+  <nav class="tabs" id="tabs" role="tablist" hidden>
+    <button type="button" role="tab" data-tab="time" aria-selected="true">Сроки по этапам</button>
+    <button type="button" role="tab" data-tab="touch" aria-selected="false">Последнее касание</button>
+  </nav>
+  <svg class="rays" viewBox="0 0 120 70" aria-hidden="true"><g fill="#00cbff"><rect x="0" y="52" width="26" height="9" rx="1"/><rect x="88" y="52" width="26" height="9" rx="1"/><rect x="18" y="20" width="9" height="26" rx="1" transform="rotate(-40 22 33)"/><rect x="44" y="4" width="9" height="30" rx="1" transform="rotate(-12 48 19)"/><rect x="66" y="4" width="9" height="30" rx="1" transform="rotate(18 70 19)"/></g></svg>
+</div></div>
+<section class="lock" id="lock" hidden>
+  <h2>Отчёт защищён паролем</h2>
+  <p class="hint" style="margin:0">Введите пароль, который вам передали. Данные расшифровываются только в вашем браузере.</p>
+  <form id="lockForm" autocomplete="on">
+    <input type="text" name="username" value="solar-funnel-report" autocomplete="username" hidden>
+    <input type="password" id="pw" autocomplete="current-password" placeholder="Пароль" required>
+    <label class="row"><input type="checkbox" id="remember" checked> Запомнить на этом устройстве</label>
+    <div class="err" id="pwErr"></div>
+    <button type="submit" id="pwBtn">Открыть отчёт</button>
+  </form>
+</section>
+<div class="wrap" id="app" hidden>
+<div id="tabTime">
+
+  <div class="filters">
+    <div class="seg" id="pipe" role="group" aria-label="Воронка"></div>
+    <label class="f">Менеджер <select id="mgr"></select></label>
+    <label class="f" title="Дата создания сделки, а для созданных раньше — дата первого перехода с начала истории">Период с <input type="date" id="from"></label>
+    <label class="f">по <input type="date" id="to"></label>
+    <label class="f">Статус
+      <select id="state">
+        <option value="all">Все</option><option value="open">Открытые</option>
+        <option value="won">Успешные</option><option value="lost">Отказ</option>
+      </select></label>
+    <label class="f">Показатель
+      <select id="metric">
+        <option value="med">Медиана</option><option value="avg">Среднее</option><option value="p75">75-й перцентиль</option>
+      </select></label>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section class="card">
+    <h2>Сколько сделка проводит на этапе</h2>
+    <p class="hint">Время от входа на этап до следующего шага вперёд. Если сделку перенесли через несколько этапов сразу, время засчитывается этапу, с которого она ушла. Справа: сколько сделок пошли дальше, ушли в отказ и стоят на этапе сейчас.</p>
+    <div class="rows" id="stages"></div>
+  </section>
+
+  <section class="card">
+    <h2>Где сейчас стоят открытые сделки</h2>
+    <p class="hint">Открытые сделки на каждом этапе по тому, сколько дней они уже на нём.</p>
+    <div class="legend" id="ageLegend"></div>
+    <div class="rows" id="ages"></div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Дольше всего стоят на этапе</h2>
+      <p class="hint">Открытые сделки дольше нормы этапа. Норма — заданный срок (например, 90 дней для «Сопровождения продаж») или, если не задан, срок, в который укладываются 75% сделок.</p>
+      <div id="stuck"></div>
+    </section>
+    <section class="card">
+      <h2>Отказы: с какого этапа</h2>
+      <p class="hint">Последний этап перед отказом и время от входа на него до отказа.</p>
+      <div id="lost"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Менеджеры: время на этапах</h2>
+    <p class="hint">Выбранный показатель по каждому этапу, в днях. Точка: меньше 3 сделок, значение ненадёжно.</p>
+    <div class="legend" id="hmLegend"></div>
+    <div class="hm" id="hm"></div>
+  </section>
+
+</div>
+<div id="tabTouch" hidden>
+  <div class="filters">
+    <div class="seg" id="tPipe" role="group" aria-label="Воронка">
+      <button type="button" data-p="">Обе</button><button type="button" data-p="Inbound">Inbound</button><button type="button" data-p="Outbound">Outbound</button>
+    </div>
+    <label class="f">Менеджер <select id="tMgr"></select></label>
+    <label class="f">Этап <select id="tStage"></select></label>
+    <label class="f">Без касания больше
+      <select id="tThr">
+        <option value="3">3 дней</option><option value="5">5 дней</option><option value="7" selected>7 дней</option>
+        <option value="14">14 дней</option><option value="30">30 дней</option>
+      </select></label>
+    <label class="f">Касания
+      <select id="tHas">
+        <option value="">Все сделки</option><option value="yes">Касание было</option><option value="no">Касаний не было</option>
+      </select></label>
+  </div>
+
+  <div class="kpis" id="tKpis"></div>
+
+  <div>
+    <section class="card">
+      <h2>Менеджеры</h2>
+      <p class="hint">Открытые сделки менеджера по давности последнего исходящего касания. Сверху — у кого больше сделок без касания дольше выбранного срока.</p>
+      <div class="legend tLegend"></div>
+      <div class="rows" id="tMgrs"></div>
+    </section>
+    <section class="card">
+      <h2>Этапы</h2>
+      <p class="hint">Те же сделки по этапам воронки.</p>
+      <div class="legend tLegend"></div>
+      <div class="rows" id="tStages"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <h2 id="tListTitle">Сделки без касания</h2>
+        <p class="hint">Отсортировано по давности касания. «Касаний не было» — поле пустое, срок считается от создания сделки.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="search" id="tQ" placeholder="Поиск: сделка, контакт, компания">
+        <button class="btn2" id="tCsv" type="button">Скачать CSV</button>
+      </div>
+    </div>
+    <div class="tbl-wrap" id="tList"></div>
+  </section>
+  <p class="foot" id="tFoot"></p>
+</div>
+  <p class="foot"><span id="foot"></span> <button class="logout" id="logout" type="button" hidden>Выйти и забыть пароль на этом устройстве</button></p>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+(function(){
+const AMO = "https://solarstaff.amocrm.ru/leads/detail/";
+const AGE = [[0,3,"до 3 дн"],[3,7,"4–7 дн"],[7,14,"8–14 дн"],[14,30,"15–30 дн"],[30,1e9,"больше 30 дн"]];
+const AGEC = ["--b1","--b2","--b3","--b4","--b5"];
+const HMC = ["--h1","--h2","--h3","--h4","--h5"];
+let D=null, pipe=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function fmt(d){
+  if(d==null||isNaN(d)) return "—";
+  if(d<1) return Math.max(1,Math.round(d*24))+" ч";
+  return (d<10? d.toFixed(1).replace(".",","): Math.round(d))+" дн";
+}
+function q(arr,p){ if(!arr.length) return null; const a=[...arr].sort((x,y)=>x-y); const i=(a.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return a[lo]+(a[hi]-a[lo])*(i-lo); }
+function stat(arr,m){ if(!arr.length) return null; if(m==="avg") return arr.reduce((s,x)=>s+x,0)/arr.length; return q(arr, m==="p75"?0.75:0.5); }
+const pct=(a,b)=>b? Math.round(a*100/b)+"%":"—";
+
+try{ const t=localStorage.getItem("theme"); if(t) document.documentElement.dataset.theme=t; }catch(e){}
+$("theme").onclick=()=>{
+  const cur=document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  const nx=cur==="dark"?"light":"dark"; document.documentElement.dataset.theme=nx;
+  try{ localStorage.setItem("theme",nx);}catch(e){}
+};
+
+const PW_KEY="solarFunnelPw";
+function start(d){
+  D=d; pipe=Object.keys(d.pipelines)[0];
+  $("lock").hidden=true; $("app").hidden=false;
+  $("sub").textContent="Обновлено "+d.generated+" · сделки с движением с "+d.created_from.split("-").reverse().join(".");
+  $("pipe").innerHTML=Object.keys(d.pipelines).map(p=>`<button type="button" data-p="${esc(p)}">${esc(p)}</button>`).join("");
+  $("pipe").onclick=e=>{const b=e.target.closest("button"); if(!b) return; pipe=b.dataset.p; fillMgr(); render();};
+  $("from").value=d.created_from; $("from").min=d.created_from;
+  ["mgr","from","to","state","metric"].forEach(id=>$(id).onchange=render);
+  fillMgr(); render();
+  initTouch();
+  $("tabs").hidden=false;
+  $("tabs").onclick=e=>{const b=e.target.closest("button"); if(b) showTab(b.dataset.tab);};
+  showTab(location.hash==="#touch"?"touch":"time");
+}
+function showTab(t){
+  document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
+  $("tabTime").hidden=t!=="time"; $("tabTouch").hidden=t!=="touch"; $("foot").hidden=t!=="time";
+  $("title").innerHTML=t==="touch"?'Последнее <em>касание</em>':'Сроки по этапам <em>воронки</em>';
+  $("sub").textContent=t==="touch"
+    ? "Обновлено "+D.generated+" · открытые сделки Inbound и Outbound"
+    : "Обновлено "+D.generated+" · сделки с движением с "+D.created_from.split("-").reverse().join(".");
+  try{ history.replaceState(null,"",t==="touch"?"#touch":location.pathname+location.search); }catch(_){}
+  if(t==="touch") renderTouch();
+}
+
+/* ───────── Вкладка «Последнее касание» ───────── */
+const TB=[[0,3,"до 3 дн"],[3,7,"4–7 дн"],[7,14,"8–14 дн"],[14,30,"15–30 дн"],[30,1e9,"больше 30 дн"]];
+let tPipe="", tShowAll=false;
+const tDays=x=>((D.now-(x.lt||x.cr))/86400);
+const fdt=ts=>{const d=new Date(ts*1000); return d.toLocaleDateString("ru-RU",{timeZone:"Europe/Moscow"})+" "+d.toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit"});};
+const stName=x=>(D.open_stages[x.p]||[])[x.st]||"—";
+function tStageOrder(){
+  const ps=tPipe?[tPipe]:Object.keys(D.open_stages), out=[];
+  ps.forEach(p=>D.open_stages[p].forEach(n=>{ if(!out.includes(n)) out.push(n); }));
+  return out;
+}
+function initTouch(){
+  if(!D.touches){ D.touches=[]; }
+  $("tPipe").onclick=e=>{const b=e.target.closest("button"); if(!b) return; tPipe=b.dataset.p; tFill(); renderTouch();};
+  ["tMgr","tStage","tThr","tHas"].forEach(id=>$(id).onchange=()=>{tShowAll=false; renderTouch();});
+  $("tQ").oninput=()=>{tShowAll=false; renderTouch();};
+  document.querySelectorAll(".tLegend").forEach(el=>el.innerHTML=TB.map((b,k)=>`<span><i style="background:var(${AGEC[k]})"></i>${b[2]}</span>`).join("")+`<span><i class="none-fill"></i>касаний не было</span>`);
+  tFill();
+}
+function tFill(){
+  const base=D.touches.filter(x=>!tPipe||x.p===tPipe);
+  const m=$("tMgr").value, st=$("tStage").value;
+  const ms=[...new Set(base.map(x=>x.m))].sort((a,b)=>a.localeCompare(b,"ru"));
+  $("tMgr").innerHTML=`<option value="">Все</option>`+ms.map(x=>`<option${x===m?" selected":""}>${esc(x)}</option>`).join("");
+  $("tStage").innerHTML=`<option value="">Все</option>`+tStageOrder().map(x=>`<option${x===st?" selected":""}>${esc(x)}</option>`).join("");
+}
+function tFiltered(withQ=true){
+  const m=$("tMgr").value, st=$("tStage").value, q=$("tQ").value.trim().toLowerCase();
+  return D.touches.filter(x=>(!tPipe||x.p===tPipe)&&(!m||x.m===m)&&(!st||stName(x)===st)&&
+    (!withQ||!q||(x.n+" "+x.ct+" "+x.co+" "+x.id).toLowerCase().includes(q)));
+}
+function tGroupRows(el, groups, thr, order){
+  const keys=order||Object.keys(groups);
+  const max=Math.max(1,...keys.map(k=>(groups[k]||[]).length));
+  const rows=keys.filter(k=>groups[k]&&groups[k].length).map(k=>{
+    const ds=groups[k], cnt=TB.map(([lo,hi])=>ds.filter(x=>x.lt&&tDays(x)>lo&&tDays(x)<=hi||(x.lt&&lo===0&&tDays(x)<=0)).length);
+    const none=ds.filter(x=>!x.lt).length, over=ds.filter(x=>tDays(x)>thr).length;
+    const med=q(ds.filter(x=>x.lt).map(tDays),.5);
+    return {k,ds,cnt,none,over,med};
+  });
+  if(!order) rows.sort((a,b)=>b.over-a.over||b.ds.length-a.ds.length);
+  el.innerHTML=!rows.length?`<div class="empty">Нет открытых сделок</div>`:
+    `<div class="h"></div><div class="h">Сделки по давности касания</div><div class="h">Всего · дольше ${thr} дн · медиана</div>`+
+    rows.map(r=>`<div class="stage"><span title="${esc(r.k)}">${esc(r.k)}</span></div>
+      <div class="track"><div class="stack" style="flex:0 1 ${(r.ds.length/max*100).toFixed(1)}%">${r.cnt.map((c,k)=>c?`<i style="flex:${c};background:var(${AGEC[k]})" data-tip="${esc(r.k)}\n${TB[k][2]}: ${c} сд."></i>`:"").join("")}${r.none?`<i class="none-fill" style="flex:${r.none}" data-tip="${esc(r.k)}\nкасаний не было: ${r.none} сд."></i>`:""}</div></div>
+      <div class="meta"><b>${r.ds.length}</b> · <span class="${r.over?"over":"muted"}">${r.over} (${pct(r.over,r.ds.length)})</span> · ${fmt(r.med)}</div>`).join("");
+}
+function renderTouch(){
+  document.querySelectorAll("#tPipe button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.p===tPipe));
+  const thr=+$("tThr").value;
+  if(!D.touch_field){ $("tKpis").innerHTML=""; $("tList").innerHTML=`<div class="empty">В amoCRM не найдено поле «Последнее касание».</div>`; return; }
+  const all=tFiltered(false), ds=tFiltered(true);
+  const over=all.filter(x=>tDays(x)>thr), none=all.filter(x=>!x.lt);
+  const med=q(all.filter(x=>x.lt).map(tDays),.5);
+  $("tKpis").innerHTML=[
+    ["Открытых сделок", all.length.toLocaleString("ru"), tPipe||"Inbound и Outbound",""],
+    [`Без касания больше ${thr} дн`, over.length.toLocaleString("ru"), `${pct(over.length,all.length)} открытых сделок`,"hot"],
+    ["Касаний не было", none.length.toLocaleString("ru"), "поле «Последнее касание» пустое",""],
+    ["Медиана с последнего касания", fmt(med), "по сделкам, где касание было",""],
+  ].map(([l,v,sub,c])=>`<div class="kpi${c?" "+c:""}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join("");
+
+  const byM={}; all.forEach(x=>(byM[x.m]=byM[x.m]||[]).push(x));
+  tGroupRows($("tMgrs"), byM, thr, null);
+  const byS={}; all.forEach(x=>{const n=stName(x); (byS[n]=byS[n]||[]).push(x);});
+  tGroupRows($("tStages"), byS, thr, tStageOrder());
+
+  const has=$("tHas").value;
+  const list=ds.filter(x=>tDays(x)>thr && (!has || (has==="yes")===!!x.lt)).sort((a,b)=>tDays(b)-tDays(a));
+  $("tListTitle").textContent=`Сделки без касания больше ${thr} дн · ${list.length}`;
+  const shown=tShowAll?list:list.slice(0,50);
+  $("tList").innerHTML=!list.length?`<div class="empty">Нет сделок без касания дольше ${thr} дн</div>`:
+    `<table><thead><tr><th>Сделка</th><th>Контакт · компания</th><th>Воронка</th><th>Этап</th><th>Менеджер</th><th>Последнее касание</th><th class="n">Дней</th></tr></thead><tbody>`+
+    shown.map(x=>`<tr><td class="who"><a href="${AMO}${x.id}" target="_blank" rel="noopener">${esc(x.n||("#"+x.id))}</a></td>
+      <td class="who">${esc(x.ct||"—")}${x.co?`<div class="c2">${esc(x.co)}</div>`:""}</td>
+      <td>${esc(x.p)}</td><td>${esc(stName(x))}</td><td>${esc(x.m)}</td>
+      <td style="white-space:nowrap">${x.lt?fdt(x.lt):`<span class="badge0">касаний не было</span>`}</td>
+      <td class="n over">${Math.floor(tDays(x))}</td></tr>`).join("")+`</tbody></table>`+
+    (list.length>shown.length?`<p style="margin:12px 0 0"><button class="btn2" id="tMore" type="button">Показать все (${list.length})</button></p>`:"");
+  if($("tMore")) $("tMore").onclick=()=>{tShowAll=true; renderTouch();};
+  $("tCsv").onclick=()=>{
+    const rows=[["ID","Сделка","Контакт","Компания","Воронка","Этап","Менеджер","Последнее касание","Дней без касания","Ссылка"]]
+      .concat(list.map(x=>[x.id,x.n,x.ct,x.co,x.p,stName(x),x.m,x.lt?fdt(x.lt):"не было",Math.floor(tDays(x)),AMO+x.id]));
+    const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\r\n");
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+    a.download=`bez-kasaniya-${thr}d.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  };
+  $("tFoot").textContent="Касание — последнее исходящее действие менеджера (поле «Последнее касание»). Дни считаются на момент обновления отчёта: "+D.generated+".";
+}
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decrypt(enc,pw){
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b64(enc.salt),iterations:enc.iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64(enc.iv)},key,b64(enc.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+function showLock(enc,msg){
+  $("app").hidden=true; $("lock").hidden=false;
+  $("sub").textContent="Введите пароль, чтобы открыть отчёт";
+  $("pwErr").textContent=msg||""; $("pw").focus();
+  $("lockForm").onsubmit=async e=>{
+    e.preventDefault(); const pw=$("pw").value; if(!pw) return;
+    $("pwBtn").disabled=true; $("pwBtn").textContent="Расшифровываю…"; $("pwErr").textContent="";
+    try{
+      const d=await decrypt(enc,pw);
+      try{ if($("remember").checked) localStorage.setItem(PW_KEY,pw); else localStorage.removeItem(PW_KEY); }catch(_){}
+      $("logout").hidden=false; start(d);
+    }catch(err){ $("pwErr").textContent="Неверный пароль"; }
+    finally{ $("pwBtn").disabled=false; $("pwBtn").textContent="Открыть отчёт"; }
+  };
+}
+$("logout").onclick=()=>{ try{localStorage.removeItem(PW_KEY);}catch(_){} location.reload(); };
+
+(async()=>{
+  try{
+    const r=await fetch("data.enc.json",{cache:"no-store"});
+    if(r.ok){
+      const enc=await r.json();
+      let saved=null; try{ saved=localStorage.getItem(PW_KEY); }catch(_){}
+      if(saved){
+        try{ const d=await decrypt(enc,saved); $("logout").hidden=false; start(d); return; }
+        catch(_){ try{localStorage.removeItem(PW_KEY);}catch(__){} return showLock(enc,"Пароль изменился — введите новый"); }
+      }
+      return showLock(enc);
+    }
+    // без шифрования — только для локальной проверки
+    const d=await (await fetch("data.json",{cache:"no-store"})).json(); start(d);
+  }catch(e){ $("sub").textContent="Не удалось загрузить данные: "+e.message; }
+})();
+
+function fillMgr(){
+  const cur=$("mgr").value;
+  const ms=[...new Set(D.deals.filter(x=>x.p===pipe).map(x=>x.m))].sort((a,b)=>a.localeCompare(b,"ru"));
+  $("mgr").innerHTML=`<option value="">Все</option>`+ms.map(m=>`<option${m===cur?" selected":""}>${esc(m)}</option>`).join("");
+}
+
+function filtered(withMgr=true){
+  const f=$("from").value, t=$("to").value, st=$("state").value, m=$("mgr").value;
+  return D.deals.filter(x=>x.p===pipe && (!f||(x.d||x.c)>=f) && (!t||(x.d||x.c)<=t) && (st==="all"||x.s===st) && (!withMgr||!m||x.m===m));
+}
+
+function stageData(deals, n){
+  const S=Array.from({length:n},()=>({adv:[],lost:[],open:0,ages:[],entered:new Set()}));
+  deals.forEach((x,k)=>{
+    S[0].entered.add(k);
+    x.seg.forEach(([i,d,j])=>{ S[i].adv.push(d); S[i].entered.add(k); if(S[j]) S[j].entered.add(k); });
+    if(x.lf!=null){ S[x.lf].lost.push(x.ld); S[x.lf].entered.add(k); }
+    if(x.cur!=null){ S[x.cur].open++; S[x.cur].entered.add(k); if(x.age!=null) S[x.cur].ages.push(x.age); }
+  });
+  return S;
+}
+
+function render(){
+  document.querySelectorAll("#pipe button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.p===pipe));
+  const names=D.pipelines[pipe], n=names.length, metric=$("metric").value;
+  const mLabel={med:"медиана",avg:"среднее",p75:"75-й перцентиль"}[metric];
+  const deals=filtered(), S=stageData(deals,n);
+  const work=names.slice(0,n-1);   // последний этап («Передача в аккаунтинг») — итоговый
+
+  // норма по этапу (p75) — для подсветки зависших
+  const NR=(D.norms&&D.norms[pipe])||{};
+  const fixed=names.map(nm=>NR[nm]||null);              // заданная норма этапа, дней
+  const p75=S.map((s,i)=>fixed[i]||q(s.adv,0.75));       // норма: заданная или 75-й перцентиль
+  const vals=work.map((_,i)=>stat(S[i].adv,metric));
+  let hot=-1, hv=-1; vals.forEach((v,i)=>{ if(v!=null && !fixed[i] && S[i].adv.length>=5 && v>hv){hv=v;hot=i;} });
+  const max=Math.max(...vals.filter((v,i)=>v!=null&&!fixed[i]&&S[i].adv.length>=3),0.0001);
+
+  // KPI
+  const open=deals.filter(x=>x.s==="open"), won=deals.filter(x=>x.s==="won"), lost=deals.filter(x=>x.s==="lost");
+  const stuckN=open.filter(x=>x.age!=null && p75[x.cur]!=null && x.age>p75[x.cur]).length;
+  const cyc=won.map(x=>x.cy).filter(v=>v!=null);
+  $("kpis").innerHTML=[
+    ["Сделок в выборке", deals.length.toLocaleString("ru"), `${pct(won.length,deals.length)} успешно · ${pct(lost.length,deals.length)} отказ`],
+    ["Цикл до успешной сделки", fmt(stat(cyc,metric)), `${mLabel}, от создания до «${names[n-1]}» · ${cyc.length} сд.`],
+    ["Открыто сейчас", open.length.toLocaleString("ru"), `из них ${stuckN} стоят дольше нормы этапа`],
+    ["Узкое место", hot>=0? esc(work[hot]) : "—", hot>=0? `${mLabel} ${fmt(hv)} на этапе`:"мало данных"],
+  ].map(([l,v,s])=>{const h=l==="Узкое место"; return `<div class="kpi${h?" hot":""}"><div class="l">${l}</div><div class="v" style="${h?"font-size:20px;line-height:1.3;padding-top:5px":""}">${v}</div><div class="s">${s}</div></div>`;}).join("");
+
+  // Время на этапе
+  $("stages").innerHTML=`<div class="h">Этап</div><div class="h">${mLabel[0].toUpperCase()+mLabel.slice(1)} времени на этапе</div><div class="h">Дальше · Отказ · Сейчас на этапе</div>`+
+    work.map((nm,i)=>{
+      const s=S[i], v=vals[i], ent=s.entered.size;
+      const tip=`${nm}${fixed[i]?` (норма ${fixed[i]} дн, бар — доля от нормы)`:""}\n${mLabel}: ${fmt(v)}\nмедиана ${fmt(q(s.adv,.5))} · 75% ${fmt(q(s.adv,.75))}\nпошли дальше: ${s.adv.length} из ${ent}`;
+      return `<div class="stage"><span title="${esc(nm)}">${esc(nm)}</span>${i===hot?'<em class="tag">дольше всего</em>':""}${fixed[i]?`<em class="tag norm">норма ${fixed[i]} дн</em>`:""}</div>
+      <div class="track" data-tip="${esc(tip)}">${v==null?'<span class="muted">нет переходов</span>':`<div class="bar${i===hot?" hot":""}" style="flex:0 1 ${Math.min(100,v/(fixed[i]?Math.max(fixed[i],v):max)*100).toFixed(1)}%;${s.adv.length<3?"opacity:.4":""}${fixed[i]?";background:var(--bar-norm)":""}"></div><span class="bv">${fmt(v)}${s.adv.length<3?` <span class="muted" style="font-weight:500">· ${s.adv.length} сд.</span>`:""}</span>`}</div>
+      <div class="meta"><b>${s.adv.length}</b> (${pct(s.adv.length,ent)}) · <b>${s.lost.length}</b> (${pct(s.lost.length,ent)}) · <b>${s.open}</b></div>`;
+    }).join("");
+
+  // Возраст открытых
+  $("ageLegend").innerHTML=AGE.map((a,k)=>`<span><i style="background:var(${AGEC[k]})"></i>${a[2]}</span>`).join("");
+  const maxOpen=Math.max(...work.map((_,i)=>S[i].open),1);
+  const anyOpen=work.some((_,i)=>S[i].open);
+  $("ages").innerHTML=!anyOpen? `<div class="empty">Нет открытых сделок в выборке</div>` :
+    `<div class="h">Этап</div><div class="h">Открытые сделки по сроку на этапе</div><div class="h">Всего · медиана на этапе</div>`+
+    work.map((nm,i)=>{
+      const s=S[i]; if(!s.open) return `<div class="stage"><span>${esc(nm)}</span></div><div class="track"><span class="muted">—</span></div><div class="meta">0</div>`;
+      const cnt=AGE.map(([lo,hi])=>s.ages.filter(a=>a>lo&&a<=hi || (lo===0&&a===0)).length);
+      const unk=s.open-s.ages.length;
+      const w=s.open/maxOpen*100;
+      return `<div class="stage"><span title="${esc(nm)}">${esc(nm)}</span></div>
+      <div class="track"><div class="stack" style="flex:0 1 ${w.toFixed(1)}%">${cnt.map((c,k)=>c?`<i style="flex:${c};background:var(${AGEC[k]})" data-tip="${esc(nm)}\n${AGE[k][2]}: ${c} сд."></i>`:"").join("")}${unk?`<i style="flex:${unk};background:var(--hm0)" data-tip="${esc(nm)}\nдата входа неизвестна: ${unk} сд."></i>`:""}</div></div>
+      <div class="meta"><b>${s.open}</b> · ${fmt(q(s.ages,.5))}${NR[nm]?` · <span class="${s.ages.some(a=>a>NR[nm])?"over":"muted"}">сверх нормы ${NR[nm]} дн: ${s.ages.filter(a=>a>NR[nm]).length}</span>`:""}${unk?` <span class="muted">· ${unk} без даты</span>`:""}</div>`;
+    }).join("");
+
+  // Зависшие
+  const top=open.filter(x=>x.age!=null && p75[x.cur]!=null && x.age>p75[x.cur]).sort((a,b)=>(b.age-p75[b.cur])-(a.age-p75[a.cur])).slice(0,20);
+  $("stuck").innerHTML=!top.length? `<div class="empty">Нет сделок дольше нормы этапа</div>` :
+    `<table><thead><tr><th>Сделка</th><th>Этап</th><th>Менеджер</th><th class="n">На этапе</th><th class="n">Норма</th><th class="n">Сверх нормы</th></tr></thead><tbody>`+
+    top.map(x=>{const nr=p75[x.cur]; const over=nr!=null&&x.age>nr;
+      return `<tr><td><a href="${AMO}${x.id}" target="_blank" rel="noopener">#${x.id}</a></td><td>${esc(names[x.cur])}</td><td>${esc(x.m)}</td><td class="n" style="white-space:nowrap">${fmt(x.age)}</td><td class="n muted" style="white-space:nowrap">${fmt(nr)}${fixed[x.cur]?"":"*"}</td><td class="n over">+${fmt(x.age-nr)}</td></tr>`;}).join("")+
+    `</tbody></table><p class="hint" style="margin:8px 0 0">Отсортировано по тому, на сколько дней превышена норма. * Норма по 75-му перцентилю выборки. Ссылки открываются для пользователей amoCRM Solar Staff.</p>`;
+
+  // Отказы
+  const lr=work.map((nm,i)=>({nm,c:S[i].lost.length,d:stat(S[i].lost,metric)})).filter(r=>r.c);
+  const lt=lr.reduce((s,r)=>s+r.c,0), lmax=Math.max(...lr.map(r=>r.c),1);
+  $("lost").innerHTML=!lr.length? `<div class="empty">Нет отказов в выборке</div>` :
+    `<table><thead><tr><th>Этап перед отказом</th><th>Отказов</th><th class="n">Доля</th><th class="n">До отказа</th></tr></thead><tbody>`+
+    lr.map(r=>`<tr><td>${esc(r.nm)}</td><td style="width:34%"><div class="bar" style="width:${(r.c/lmax*100).toFixed(1)}%;height:10px" data-tip="${esc(r.nm)}\nотказов: ${r.c}"></div></td><td class="n">${r.c} · ${pct(r.c,lt)}</td><td class="n">${fmt(r.d)}</td></tr>`).join("")+
+    `</tbody></table>`;
+
+  // Менеджеры
+  const all=filtered(false);
+  const mgrs=[...new Set(all.map(x=>x.m))].sort((a,b)=>a.localeCompare(b,"ru"));
+  const cells=mgrs.map(m=>{const ds=all.filter(x=>x.m===m); const s=stageData(ds,n); return {m,n:ds.length,c:work.map((_,i)=>({v:stat(s[i].adv,metric),k:s[i].adv.length}))};});
+  const hmMax=Math.max(...cells.flatMap(r=>r.c.filter((c,i)=>c.k>=3&&c.v!=null&&!fixed[i]).map(c=>c.v)),0.0001);
+  const shade=(v,i)=>{const t=Math.min(1,v/(fixed[i]||hmMax)); const k=Math.min(4,Math.floor(t*5)); return k;};
+  $("hmLegend").innerHTML=`<span>быстрее</span>`+HMC.map(c=>`<span><i style="background:var(${c})"></i></span>`).join("")+`<span>дольше</span>`;
+  const sel=$("mgr").value;
+  $("hm").innerHTML=!mgrs.length? `<div class="empty">Нет данных</div>` :
+    `<table><thead><tr><th>Менеджер</th><th class="n">Сделок</th>${work.map(nm=>`<th class="st">${esc(nm)}</th>`).join("")}</tr></thead><tbody>`+
+    cells.map(r=>`<tr${sel&&r.m!==sel?' style="opacity:.45"':""}><td>${esc(r.m)}</td><td class="n">${r.n}</td>${r.c.map((c,i)=>{
+      if(!c.k) return `<td class="c muted">—</td>`;
+      if(c.k<3) return `<td class="c muted" data-tip="${esc(r.m)} · ${esc(work[i])}\n${fmt(c.v)}, всего ${c.k} сд.">·</td>`;
+      const k=shade(c.v,i), dark=k>=3;
+      return `<td class="c" style="background:var(${HMC[k]});color:${dark?"var(--hm-ink)":"var(--text)"}" data-tip="${esc(r.m)} · ${esc(work[i])}\n${mLabel}: ${fmt(c.v)}\nпереходов: ${c.k}">${fmt(c.v).replace(" дн","").replace(" ч","ч")}</td>`;}).join("")}</tr>`).join("")+
+    `</tbody></table>`;
+
+  const an=deals.reduce((s,x)=>s+(x.an||0),0);
+  $("foot").textContent=`Даты берутся из полей «Дата перехода» только той воронки, в которой сделка находится сейчас. Вход на «${names[0]}» — дата создания сделки (для сделок, созданных до ${D.created_from.split("-").reverse().join(".")}, время на этом этапе не считается).`+(an?` Пропущено ${an} дат, которые раньше предыдущего этапа (возвраты назад).`:"");
+}
+
+// tooltip
+const tip=$("tip");
+document.addEventListener("mousemove",e=>{
+  const el=e.target.closest("[data-tip]");
+  if(!el){tip.style.opacity=0;return;}
+  tip.textContent=el.dataset.tip; tip.style.opacity=1;
+  const w=tip.offsetWidth,h=tip.offsetHeight;
+  let x=e.clientX+14,y=e.clientY+14;
+  if(x+w>innerWidth-8) x=e.clientX-w-14;
+  if(y+h>innerHeight-8) y=e.clientY-h-14;
+  tip.style.left=x+"px"; tip.style.top=y+"px";
+});
+})();
+</script>
+</body>
+</html>

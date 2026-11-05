@@ -112,7 +112,7 @@ def load_calendar():
     this_year = datetime.now(MSK).year
     for y in range(2025, this_year + 2):
         try:
-            r = requests.get(f"https://xmlcalendar.ru/data/ru/{y}/calendar.json", timeout=20)
+            r = requests.get(f"https://xmlcalendar.ru/data/ru/{y}/calendar.json", timeout=5)
             if r.status_code == 404:
                 continue
             r.raise_for_status()

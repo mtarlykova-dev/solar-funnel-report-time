@@ -190,7 +190,7 @@ label.f.wd input{accent-color:var(--accent);width:16px;height:16px}
         <option value="all">Все</option><option value="open">Открытые</option>
         <option value="won">Успешные</option><option value="lost">Отказ</option>
       </select></label>
-    <label class="f wd" title="Часы субботы и воскресенья (по МСК) не учитываются в сроках"><input type="checkbox" id="wd1" checked> Не считать выходные</label>
+    <label class="f wd" title="Часы выходных и праздников по производственному календарю РФ (МСК) не учитываются в сроках"><input type="checkbox" id="wd1" checked> Не считать выходные и праздники</label>
     <label class="f">Показатель
       <select id="metric">
         <option value="med">Медиана</option><option value="avg">Среднее</option><option value="p75">75-й перцентиль</option>
@@ -245,7 +245,7 @@ label.f.wd input{accent-color:var(--accent);width:16px;height:16px}
         <option value="3">3 дней</option><option value="5">5 дней</option><option value="7" selected>7 дней</option>
         <option value="14">14 дней</option><option value="30">30 дней</option>
       </select></label>
-    <label class="f wd" title="Часы субботы и воскресенья (по МСК) не учитываются в сроках"><input type="checkbox" id="wd2" checked> Не считать выходные</label>
+    <label class="f wd" title="Часы выходных и праздников по производственному календарю РФ (МСК) не учитываются в сроках"><input type="checkbox" id="wd2" checked> Не считать выходные и праздники</label>
     <label class="f">Учитывать
       <select id="tMode">
         <option value="both">Исходящие и входящие</option><option value="out">Только исходящие</option>
@@ -303,23 +303,28 @@ let D=null, pipe=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-/* Рабочие дни: часы субботы и воскресенья по МСК не считаются */
+/* Рабочие дни: часы выходных и праздников по МСК (производственный календарь РФ) не считаются */
 let WD=true;
 try{ const v=localStorage.getItem("solarWD"); if(v!=null) WD=v==="1"; }catch(_){}
 const DU=()=>WD?" р.дн":" дн";
 const lab=t=>WD?t.replace(/ дн$/," р.дн"):t;
+const YB={};   // год → номер 1 января (дни от 01.01.1970)
+function workday(d){
+  const y=new Date(d*86400000).getUTCFullYear(), c=D&&D.cal&&D.cal[y];
+  if(c){ const b=YB[y]!=null?YB[y]:(YB[y]=Date.UTC(y,0,1)/86400000); return c[d-b]!=="1"; }
+  return ((d+3)%7+7)%7<5;
+}
 function bizDays(t0,t1){
   if(t0==null||t1==null||t1<=t0) return 0;
   const a=t0+10800, b=t1+10800, da=Math.floor(a/86400), db=Math.floor(b/86400);
-  const wd=d=>((d+3)%7+7)%7<5;
+  const wd=workday;
   if(da===db) return wd(da)?(b-a)/86400:0;
-  let sec=(wd(da)?(da+1)*86400-a:0)+(wd(db)?b-db*86400:0);
-  const n=db-da-1, w=Math.floor(n/7); let full=w*5;
-  for(let d=da+1+w*7; d<db; d++) if(wd(d)) full++;
+  let sec=(wd(da)?(da+1)*86400-a:0)+(wd(db)?b-db*86400:0), full=0;
+  for(let d=da+1; d<db; d++) if(wd(d)) full++;
   return full+sec/86400;
 }
 const spanDays=(t0,t1)=>WD?bizDays(t0,t1):(t1-t0)/86400;
-const normD=n=>n==null?null:(WD?Math.round(n*5/7):n);   // нормы заданы в календарных днях
+const normD=n=>n==null?null:(WD?Math.round(n*247/365):n);   // нормы заданы в календарных днях; в году ~247 рабочих
 function applyWD(){
   (D.deals||[]).forEach(x=>{
     if(!x._c) x._c={seg:x.seg.map(g=>[g[0],g[1],g[2]]), segB:x.seg.map(g=>[g[0],g[3]!=null?g[3]:g[1],g[2]]),
@@ -469,7 +474,7 @@ function renderTouch(){
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
     a.download=has==="wait"?"zhdet-otveta.csv":`bez-kasaniya-${thr}d.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   };
-  $("tFoot").textContent=(WD?"Сроки в рабочих днях: суббота и воскресенье не считаются. ":"")+"Исходящее — поле «Последнее касание» (действие менеджера). Входящее — звонок, сообщение или письмо клиента из журнала событий amoCRM за последние "+(D.incoming_days||180)+" дн, на сделке, её контакте или компании. Дни считаются на момент обновления отчёта: "+D.generated+".";
+  $("tFoot").textContent=(WD?"Сроки в рабочих днях по производственному календарю РФ: выходные и праздники не считаются. ":"")+"Исходящее — поле «Последнее касание» (действие менеджера). Входящее — звонок, сообщение или письмо клиента из журнала событий amoCRM за последние "+(D.incoming_days||180)+" дн, на сделке, её контакте или компании. Дни считаются на момент обновления отчёта: "+D.generated+".";
 }
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function decrypt(enc,pw){
@@ -621,7 +626,7 @@ function render(){
     `</tbody></table>`;
 
   const an=deals.reduce((s,x)=>s+(x.an||0),0);
-  $("foot").textContent=(WD?`Сроки в рабочих днях: суббота и воскресенье не считаются, норма «${Object.keys(NR0)[0]||"—"}» пересчитана в рабочие дни (${Object.values(NR0)[0]||""} календарных → ${Object.values(NR)[0]||""} рабочих). `:"")+`Даты берутся из полей «Дата перехода» только той воронки, в которой сделка находится сейчас. Вход на «${names[0]}» — дата создания сделки (для сделок, созданных до ${D.created_from.split("-").reverse().join(".")}, время на этом этапе не считается).`+(an?` Пропущено ${an} дат, которые раньше предыдущего этапа (возвраты назад).`:"");
+  $("foot").textContent=(WD?`Сроки в рабочих днях по производственному календарю РФ: выходные и праздники не считаются, норма «${Object.keys(NR0)[0]||"—"}» пересчитана в рабочие дни (${Object.values(NR0)[0]||""} календарных → ${Object.values(NR)[0]||""} рабочих). `:"")+`Даты берутся из полей «Дата перехода» только той воронки, в которой сделка находится сейчас. Вход на «${names[0]}» — дата создания сделки (для сделок, созданных до ${D.created_from.split("-").reverse().join(".")}, время на этом этапе не считается).`+(an?` Пропущено ${an} дат, которые раньше предыдущего этапа (возвраты назад).`:"");
 }
 
 // tooltip

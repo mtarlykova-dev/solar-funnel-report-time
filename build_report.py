@@ -93,19 +93,66 @@ def paginate(path, params, key):
         p = None
 
 
+# ── Производственный календарь РФ ─────────────────────────────────────────────
+# calendar_ru.json в репозитории + свежие данные с xmlcalendar.ru при каждой сборке.
+# Для лет вне календаря — обычное правило: суббота и воскресенье выходные.
+CAL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "calendar_ru.json")
+CAL = {}            # год → строка '0'/'1' по дням года (1 — нерабочий)
+OFF_DAYS = set()    # номера нерабочих дней (дни от 01.01.1970 по МСК) в годах календаря
+CAL_YEARS = set()
+
+
+def load_calendar():
+    global CAL
+    try:
+        with open(CAL_FILE, encoding="utf-8") as fh:
+            CAL = dict(json.load(fh)["years"])
+    except (OSError, ValueError, KeyError) as e:
+        print(f"! {CAL_FILE}: {e}")
+    this_year = datetime.now(MSK).year
+    for y in range(2025, this_year + 2):
+        try:
+            r = requests.get(f"https://xmlcalendar.ru/data/ru/{y}/calendar.json", timeout=20)
+            if r.status_code == 404:
+                continue
+            r.raise_for_status()
+            off = set()
+            for m in r.json()["months"]:
+                for t in m["days"].split(","):
+                    if t and not t.endswith("*"):           # «*» — сокращённый рабочий день
+                        off.add((m["month"], int(t.rstrip("+"))))
+            start = datetime(y, 1, 1)
+            n = (datetime(y + 1, 1, 1) - start).days
+            days = [(start + timedelta(i)) for i in range(n)]
+            CAL[str(y)] = "".join("1" if (d.month, d.day) in off else "0" for d in days)
+        except Exception as e:   # сеть/формат — остаёмся на сохранённом календаре
+            print(f"  календарь {y}: xmlcalendar.ru недоступен ({e.__class__.__name__}), беру сохранённый")
+    OFF_DAYS.clear(); CAL_YEARS.clear()
+    for y, sdays in CAL.items():
+        base = (datetime(int(y), 1, 1) - datetime(1970, 1, 1)).days
+        CAL_YEARS.add(int(y))
+        OFF_DAYS.update(base + i for i, c in enumerate(sdays) if c == "1")
+    print(f"Производственный календарь: {', '.join(sorted(CAL)) or 'нет'} "
+          f"(нерабочих дней: {', '.join(f'{y}: {v.count(chr(49))}' for y, v in sorted(CAL.items()))})")
+
+
+def _workday(d):
+    y = (datetime(1970, 1, 1) + timedelta(days=d)).year
+    if y in CAL_YEARS:
+        return d not in OFF_DAYS
+    return (d + 3) % 7 < 5                   # 01.01.1970 — четверг; пн..пт
+
+
 def biz_days(t0, t1):
-    """Длительность в рабочих днях между двумя моментами: часы субботы и воскресенья (по МСК) не считаются."""
+    """Длительность в рабочих днях: часы выходных и праздников (по МСК, производственный календарь РФ) не считаются."""
     if t0 is None or t1 is None or t1 <= t0:
         return 0.0
     a, b = t0 + 10800, t1 + 10800            # в московское время
     da, db = a // 86400, b // 86400
-    wd = lambda d: (d + 3) % 7 < 5           # 01.01.1970 — четверг; пн..пт
     if da == db:
-        return (b - a) / 86400 if wd(da) else 0.0
-    sec = ((da + 1) * 86400 - a if wd(da) else 0) + (b - db * 86400 if wd(db) else 0)
-    n = db - da - 1
-    full = n // 7 * 5 + sum(1 for d in range(da + 1 + n // 7 * 7, db) if wd(d))
-    return full + sec / 86400
+        return (b - a) / 86400 if _workday(da) else 0.0
+    sec = ((da + 1) * 86400 - a if _workday(da) else 0) + (b - db * 86400 if _workday(db) else 0)
+    return sum(1 for d in range(da + 1, db) if _workday(d)) + sec / 86400
 
 
 def norm(s):
@@ -339,6 +386,7 @@ def lead_record(lead, kw, m, users, now):
 def main():
     if not TOKEN:
         sys.exit("Нет токена: задайте AMO_TOKEN")
+    load_calendar()
     meta, touch_fid = load_structure()
     users = load_users()
     now = int(time.time())
@@ -382,6 +430,7 @@ def main():
         "now": now,
         "touch_field": bool(touch_fid),
         "incoming_days": INCOMING_DAYS,
+        "cal": CAL,                        # производственный календарь для расчётов на странице
         "open_stages": {kw: [s["name"] for s in m["open"]] for kw, m in meta.items()},
         "touches": touches,
     }

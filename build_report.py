@@ -33,6 +33,11 @@ TOKEN = os.environ.get("AMO_TOKEN", "")
 PIPELINES = ["Inbound", "Outbound"]      # порядок важен: Inbound-поля в карточке выше Outbound
 FIELD_PREFIX = "Дата перехода:"
 TOUCH_FIELD = "Последнее касание"        # поле сделки (дата и время) — последнее исходящее касание менеджера
+INCOMING_DAYS = 180                      # за сколько дней искать входящие касания (звонки, сообщения, письма)
+# Входящие события: все типы amo с ключом incoming_*, кроме заявок/неразобранного.
+# Если список типов недоступен — берётся этот запасной набор.
+INCOMING_FALLBACK = ["incoming_call", "incoming_chat_message", "incoming_sms"]
+INCOMING_EXCLUDE = ("lead", "unsorted")
 MSK = timezone(timedelta(hours=3))
 CREATED_FROM = datetime(2026, 6, 1, tzinfo=MSK)   # с этой даты есть история переходов
 FROM_TS = int(CREATED_FROM.timestamp())
@@ -185,10 +190,53 @@ def touch_record(lead, kw, m, users, touch_fid):
         "m": users.get(lead.get("responsible_user_id"), str(lead.get("responsible_user_id"))),
         "n": (lead.get("name") or "").strip(),
         "ct": main, "co": companies[0]["id"] if companies else None,
+        "_cts": [c["id"] for c in contacts], "_cos": [c["id"] for c in companies],
         "st": st_idx,                  # индекс в списке открытых этапов воронки
-        "lt": lt,                      # «Последнее касание», unix-время; None — касаний не было
+        "lt": lt,                      # «Последнее касание» (исходящее), unix-время; None — не было
+        "li": None,                    # последнее входящее касание (звонок/сообщение/письмо клиента)
         "cr": lead["created_at"],
     }
+
+
+def incoming_types():
+    try:
+        data = api("/events/types", {"language_code": "ru"}) or {}
+        items = data.get("_embedded", {}).get("events_types", [])
+        keys = [str(t.get("key") or t.get("type")) for t in items]
+        chosen = [k for k in keys if k.startswith("incoming_") and not any(x in k for x in INCOMING_EXCLUDE)]
+        if chosen:
+            return chosen
+    except RuntimeError as e:
+        print(f"! Типы событий недоступны ({e})")
+    return INCOMING_FALLBACK
+
+
+def apply_incoming(touches, now):
+    """Последнее входящее касание по каждой открытой сделке: события на самой сделке,
+    её контактах или компании."""
+    by_lead, by_contact, by_company = {}, {}, {}
+    for t in touches:
+        by_lead[t["id"]] = [t]
+        for c in t["_cts"]:
+            by_contact.setdefault(c, []).append(t)
+        for c in t["_cos"]:
+            by_company.setdefault(c, []).append(t)
+    maps = {"lead": by_lead, "leads": by_lead, "contact": by_contact, "contacts": by_contact,
+            "company": by_company, "companies": by_company}
+
+    types = incoming_types()
+    print(f"Входящие типы событий: {', '.join(types)}")
+    since = now - INCOMING_DAYS * 86400
+    counts = {}
+    for i in range(0, len(types), 10):
+        params = [("limit", 100), ("filter[created_at][from]", since)] + [("filter[type][]", x) for x in types[i:i + 10]]
+        for ev in paginate("/events", params, "events"):
+            counts[ev.get("type")] = counts.get(ev.get("type"), 0) + 1
+            for t in maps.get(ev.get("entity_type"), {}).get(ev.get("entity_id"), []):
+                if t["li"] is None or ev["created_at"] > t["li"]:
+                    t["li"] = ev["created_at"]
+    print(f"Входящих событий за {INCOMING_DAYS} дн: {counts or 0}")
+    print(f"Сделок с входящими касаниями: {sum(1 for t in touches if t['li'])}")
 
 
 def lead_record(lead, kw, m, users, now):
@@ -294,12 +342,15 @@ def main():
         print(f"{kw}: сделок в отчёте по срокам {n}")
     print(f"Открытых сделок для вкладки касаний: {len(touches)}")
 
+    apply_incoming(touches, now)
+
     # кто клиент: имена основных контактов и компаний (только для открытых сделок)
     cnames = names_by_id("/contacts", "contacts", {t["ct"] for t in touches if t["ct"]})
     onames = names_by_id("/companies", "companies", {t["co"] for t in touches if t["co"]})
     for t in touches:
         t["ct"] = cnames.get(t["ct"], "") if t["ct"] else ""
         t["co"] = onames.get(t["co"], "") if t["co"] else ""
+        del t["_cts"], t["_cos"]
 
     out = {
         "generated": datetime.fromtimestamp(now, MSK).strftime("%d.%m.%Y %H:%M"),
@@ -311,6 +362,7 @@ def main():
         "deals": deals,
         "now": now,
         "touch_field": bool(touch_fid),
+        "incoming_days": INCOMING_DAYS,
         "open_stages": {kw: [s["name"] for s in m["open"]] for kw, m in meta.items()},
         "touches": touches,
     }

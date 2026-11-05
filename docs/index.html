@@ -148,6 +148,7 @@ input[type=search]{font:inherit;color:var(--text);background:var(--surface);bord
 .tbl-wrap table{min-width:860px}
 td.who{max-width:240px}
 td.who .c2{color:var(--text-3);font-size:12px}
+.badge0.wait{background:var(--tag-bg);color:var(--tag-tx);display:inline-block;margin-top:3px}
 .badge0{font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px;background:var(--surface-2);color:var(--text-2);white-space:nowrap}
 .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
 </style>
@@ -241,9 +242,14 @@ td.who .c2{color:var(--text-3);font-size:12px}
         <option value="3">3 дней</option><option value="5">5 дней</option><option value="7" selected>7 дней</option>
         <option value="14">14 дней</option><option value="30">30 дней</option>
       </select></label>
-    <label class="f">Касания
+    <label class="f">Учитывать
+      <select id="tMode">
+        <option value="both">Исходящие и входящие</option><option value="out">Только исходящие</option>
+      </select></label>
+    <label class="f">Показать
       <select id="tHas">
-        <option value="">Все сделки</option><option value="yes">Касание было</option><option value="no">Касаний не было</option>
+        <option value="">Все сделки</option><option value="wait">Клиент ждёт ответа</option>
+        <option value="yes">Касание было</option><option value="no">Касаний не было</option>
       </select></label>
   </div>
 
@@ -252,7 +258,7 @@ td.who .c2{color:var(--text-3);font-size:12px}
   <div>
     <section class="card">
       <h2>Менеджеры</h2>
-      <p class="hint">Открытые сделки менеджера по давности последнего исходящего касания. Сверху — у кого больше сделок без касания дольше выбранного срока.</p>
+      <p class="hint">Открытые сделки менеджера по давности последнего касания (по выбранному режиму: исходящие и входящие или только исходящие). Сверху — у кого больше сделок без касания дольше выбранного срока.</p>
       <div class="legend tLegend"></div>
       <div class="rows" id="tMgrs"></div>
     </section>
@@ -268,7 +274,7 @@ td.who .c2{color:var(--text-3);font-size:12px}
     <div class="card-head">
       <div>
         <h2 id="tListTitle">Сделки без касания</h2>
-        <p class="hint">Отсортировано по давности касания. «Касаний не было» — поле пустое, срок считается от создания сделки.</p>
+        <p class="hint">Отсортировано по давности касания. Если касаний не было, срок считается от создания сделки. «Ждёт ответа» — клиент писал или звонил после нашего последнего исходящего касания.</p>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <input type="search" id="tQ" placeholder="Поиск: сделка, контакт, компания">
@@ -338,7 +344,9 @@ function showTab(t){
 /* ───────── Вкладка «Последнее касание» ───────── */
 const TB=[[0,3,"до 3 дн"],[3,7,"4–7 дн"],[7,14,"8–14 дн"],[14,30,"15–30 дн"],[30,1e9,"больше 30 дн"]];
 let tPipe="", tShowAll=false;
-const tDays=x=>((D.now-(x.lt||x.cr))/86400);
+const tLast=x=>($("tMode").value==="out"?x.lt:Math.max(x.lt||0,x.li||0)||null);
+const tWait=x=>!!(x.li&&(!x.lt||x.li>x.lt));          // клиент писал/звонил после нашего последнего исходящего
+const tDays=x=>((D.now-(tLast(x)||x.cr))/86400);
 const fdt=ts=>{const d=new Date(ts*1000); return d.toLocaleDateString("ru-RU",{timeZone:"Europe/Moscow"})+" "+d.toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit"});};
 const stName=x=>(D.open_stages[x.p]||[])[x.st]||"—";
 function tStageOrder(){
@@ -349,7 +357,7 @@ function tStageOrder(){
 function initTouch(){
   if(!D.touches){ D.touches=[]; }
   $("tPipe").onclick=e=>{const b=e.target.closest("button"); if(!b) return; tPipe=b.dataset.p; tFill(); renderTouch();};
-  ["tMgr","tStage","tThr","tHas"].forEach(id=>$(id).onchange=()=>{tShowAll=false; renderTouch();});
+  ["tMgr","tStage","tThr","tHas","tMode"].forEach(id=>$(id).onchange=()=>{tShowAll=false; renderTouch();});
   $("tQ").oninput=()=>{tShowAll=false; renderTouch();};
   document.querySelectorAll(".tLegend").forEach(el=>el.innerHTML=TB.map((b,k)=>`<span><i style="background:var(${AGEC[k]})"></i>${b[2]}</span>`).join("")+`<span><i class="none-fill"></i>касаний не было</span>`);
   tFill();
@@ -370,9 +378,9 @@ function tGroupRows(el, groups, thr, order){
   const keys=order||Object.keys(groups);
   const max=Math.max(1,...keys.map(k=>(groups[k]||[]).length));
   const rows=keys.filter(k=>groups[k]&&groups[k].length).map(k=>{
-    const ds=groups[k], cnt=TB.map(([lo,hi])=>ds.filter(x=>x.lt&&tDays(x)>lo&&tDays(x)<=hi||(x.lt&&lo===0&&tDays(x)<=0)).length);
-    const none=ds.filter(x=>!x.lt).length, over=ds.filter(x=>tDays(x)>thr).length;
-    const med=q(ds.filter(x=>x.lt).map(tDays),.5);
+    const ds=groups[k], cnt=TB.map(([lo,hi])=>ds.filter(x=>tLast(x)&&tDays(x)>lo&&tDays(x)<=hi||(tLast(x)&&lo===0&&tDays(x)<=0)).length);
+    const none=ds.filter(x=>!tLast(x)).length, over=ds.filter(x=>tDays(x)>thr).length;
+    const med=q(ds.filter(x=>tLast(x)).map(tDays),.5);
     return {k,ds,cnt,none,over,med};
   });
   if(!order) rows.sort((a,b)=>b.over-a.over||b.ds.length-a.ds.length);
@@ -387,13 +395,15 @@ function renderTouch(){
   const thr=+$("tThr").value;
   if(!D.touch_field){ $("tKpis").innerHTML=""; $("tList").innerHTML=`<div class="empty">В amoCRM не найдено поле «Последнее касание».</div>`; return; }
   const all=tFiltered(false), ds=tFiltered(true);
-  const over=all.filter(x=>tDays(x)>thr), none=all.filter(x=>!x.lt);
-  const med=q(all.filter(x=>x.lt).map(tDays),.5);
+  const over=all.filter(x=>tDays(x)>thr), none=all.filter(x=>!tLast(x)), wait=all.filter(tWait);
+  const med=q(all.filter(x=>tLast(x)).map(tDays),.5);
+  const both=$("tMode").value!=="out";
   $("tKpis").innerHTML=[
     ["Открытых сделок", all.length.toLocaleString("ru"), tPipe||"Inbound и Outbound",""],
     [`Без касания больше ${thr} дн`, over.length.toLocaleString("ru"), `${pct(over.length,all.length)} открытых сделок`,"hot"],
-    ["Касаний не было", none.length.toLocaleString("ru"), "поле «Последнее касание» пустое",""],
-    ["Медиана с последнего касания", fmt(med), "по сделкам, где касание было",""],
+    ["Клиент ждёт ответа", wait.length.toLocaleString("ru"), "писал или звонил после нашего последнего касания",""],
+    ["Касаний не было", none.length.toLocaleString("ru"), both?"ни исходящих, ни входящих":"исходящих не было",""],
+    ["Медиана с последнего касания", fmt(med), both?"исходящего или входящего":"исходящего",""],
   ].map(([l,v,sub,c])=>`<div class="kpi${c?" "+c:""}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${sub}</div></div>`).join("");
 
   const byM={}; all.forEach(x=>(byM[x.m]=byM[x.m]||[]).push(x));
@@ -402,26 +412,29 @@ function renderTouch(){
   tGroupRows($("tStages"), byS, thr, tStageOrder());
 
   const has=$("tHas").value;
-  const list=ds.filter(x=>tDays(x)>thr && (!has || (has==="yes")===!!x.lt)).sort((a,b)=>tDays(b)-tDays(a));
-  $("tListTitle").textContent=`Сделки без касания больше ${thr} дн · ${list.length}`;
+  const list=(has==="wait"
+      ? ds.filter(tWait).sort((a,b)=>a.li-b.li)
+      : ds.filter(x=>tDays(x)>thr && (!has || (has==="yes")===!!tLast(x))).sort((a,b)=>tDays(b)-tDays(a)));
+  $("tListTitle").textContent=(has==="wait"?"Клиент ждёт ответа":`Сделки без касания больше ${thr} дн`)+` · ${list.length}`;
   const shown=tShowAll?list:list.slice(0,50);
-  $("tList").innerHTML=!list.length?`<div class="empty">Нет сделок без касания дольше ${thr} дн</div>`:
-    `<table><thead><tr><th>Сделка</th><th>Контакт · компания</th><th>Воронка</th><th>Этап</th><th>Менеджер</th><th>Последнее касание</th><th class="n">Дней</th></tr></thead><tbody>`+
+  $("tList").innerHTML=!list.length?`<div class="empty">${has==="wait"?"Нет сделок, где клиент ждёт ответа":`Нет сделок без касания дольше ${thr} дн`}</div>`:
+    `<table><thead><tr><th>Сделка</th><th>Контакт · компания</th><th>Воронка</th><th>Этап</th><th>Менеджер</th><th>Исходящее</th><th>Входящее</th><th class="n">Дней</th></tr></thead><tbody>`+
     shown.map(x=>`<tr><td class="who"><a href="${AMO}${x.id}" target="_blank" rel="noopener">${esc(x.n||("#"+x.id))}</a></td>
       <td class="who">${esc(x.ct||"—")}${x.co?`<div class="c2">${esc(x.co)}</div>`:""}</td>
       <td>${esc(x.p)}</td><td>${esc(stName(x))}</td><td>${esc(x.m)}</td>
-      <td style="white-space:nowrap">${x.lt?fdt(x.lt):`<span class="badge0">касаний не было</span>`}</td>
-      <td class="n over">${Math.floor(tDays(x))}</td></tr>`).join("")+`</tbody></table>`+
+      <td style="white-space:nowrap">${x.lt?fdt(x.lt):`<span class="badge0">не было</span>`}</td>
+      <td style="white-space:nowrap">${x.li?fdt(x.li):`<span class="muted">—</span>`}${tWait(x)?`<div><span class="badge0 wait">ждёт ответа</span></div>`:""}</td>
+      <td class="n ${tDays(x)>thr?"over":""}">${Math.floor(tDays(x))}</td></tr>`).join("")+`</tbody></table>`+
     (list.length>shown.length?`<p style="margin:12px 0 0"><button class="btn2" id="tMore" type="button">Показать все (${list.length})</button></p>`:"");
   if($("tMore")) $("tMore").onclick=()=>{tShowAll=true; renderTouch();};
   $("tCsv").onclick=()=>{
-    const rows=[["ID","Сделка","Контакт","Компания","Воронка","Этап","Менеджер","Последнее касание","Дней без касания","Ссылка"]]
-      .concat(list.map(x=>[x.id,x.n,x.ct,x.co,x.p,stName(x),x.m,x.lt?fdt(x.lt):"не было",Math.floor(tDays(x)),AMO+x.id]));
+    const rows=[["ID","Сделка","Контакт","Компания","Воронка","Этап","Менеджер","Последнее исходящее","Последнее входящее","Ждёт ответа","Дней без касания","Ссылка"]]
+      .concat(list.map(x=>[x.id,x.n,x.ct,x.co,x.p,stName(x),x.m,x.lt?fdt(x.lt):"не было",x.li?fdt(x.li):"",tWait(x)?"да":"",Math.floor(tDays(x)),AMO+x.id]));
     const csv="\ufeff"+rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\r\n");
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
-    a.download=`bez-kasaniya-${thr}d.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    a.download=has==="wait"?"zhdet-otveta.csv":`bez-kasaniya-${thr}d.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   };
-  $("tFoot").textContent="Касание — последнее исходящее действие менеджера (поле «Последнее касание»). Дни считаются на момент обновления отчёта: "+D.generated+".";
+  $("tFoot").textContent="Исходящее — поле «Последнее касание» (действие менеджера). Входящее — звонок, сообщение или письмо клиента из журнала событий amoCRM за последние "+(D.incoming_days||180)+" дн, на сделке, её контакте или компании. Дни считаются на момент обновления отчёта: "+D.generated+".";
 }
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function decrypt(enc,pw){

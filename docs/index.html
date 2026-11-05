@@ -148,6 +148,8 @@ input[type=search]{font:inherit;color:var(--text);background:var(--surface);bord
 .tbl-wrap table{min-width:860px}
 td.who{max-width:240px}
 td.who .c2{color:var(--text-3);font-size:12px}
+label.f.wd{color:var(--text);font-weight:600}
+label.f.wd input{accent-color:var(--accent);width:16px;height:16px}
 .badge0.wait{background:var(--tag-bg);color:var(--tag-tx);display:inline-block;margin-top:3px}
 .badge0{font-size:11px;font-weight:700;border-radius:999px;padding:1px 7px;background:var(--surface-2);color:var(--text-2);white-space:nowrap}
 .card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
@@ -188,6 +190,7 @@ td.who .c2{color:var(--text-3);font-size:12px}
         <option value="all">Все</option><option value="open">Открытые</option>
         <option value="won">Успешные</option><option value="lost">Отказ</option>
       </select></label>
+    <label class="f wd" title="Часы субботы и воскресенья (по МСК) не учитываются в сроках"><input type="checkbox" id="wd1" checked> Не считать выходные</label>
     <label class="f">Показатель
       <select id="metric">
         <option value="med">Медиана</option><option value="avg">Среднее</option><option value="p75">75-й перцентиль</option>
@@ -242,6 +245,7 @@ td.who .c2{color:var(--text-3);font-size:12px}
         <option value="3">3 дней</option><option value="5">5 дней</option><option value="7" selected>7 дней</option>
         <option value="14">14 дней</option><option value="30">30 дней</option>
       </select></label>
+    <label class="f wd" title="Часы субботы и воскресенья (по МСК) не учитываются в сроках"><input type="checkbox" id="wd2" checked> Не считать выходные</label>
     <label class="f">Учитывать
       <select id="tMode">
         <option value="both">Исходящие и входящие</option><option value="out">Только исходящие</option>
@@ -299,10 +303,36 @@ let D=null, pipe=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
+/* Рабочие дни: часы субботы и воскресенья по МСК не считаются */
+let WD=true;
+try{ const v=localStorage.getItem("solarWD"); if(v!=null) WD=v==="1"; }catch(_){}
+const DU=()=>WD?" р.дн":" дн";
+const lab=t=>WD?t.replace(/ дн$/," р.дн"):t;
+function bizDays(t0,t1){
+  if(t0==null||t1==null||t1<=t0) return 0;
+  const a=t0+10800, b=t1+10800, da=Math.floor(a/86400), db=Math.floor(b/86400);
+  const wd=d=>((d+3)%7+7)%7<5;
+  if(da===db) return wd(da)?(b-a)/86400:0;
+  let sec=(wd(da)?(da+1)*86400-a:0)+(wd(db)?b-db*86400:0);
+  const n=db-da-1, w=Math.floor(n/7); let full=w*5;
+  for(let d=da+1+w*7; d<db; d++) if(wd(d)) full++;
+  return full+sec/86400;
+}
+const spanDays=(t0,t1)=>WD?bizDays(t0,t1):(t1-t0)/86400;
+const normD=n=>n==null?null:(WD?Math.round(n*5/7):n);   // нормы заданы в календарных днях
+function applyWD(){
+  (D.deals||[]).forEach(x=>{
+    if(!x._c) x._c={seg:x.seg.map(g=>[g[0],g[1],g[2]]), segB:x.seg.map(g=>[g[0],g[3]!=null?g[3]:g[1],g[2]]),
+      age:x.age, ab:x.ab!=null?x.ab:x.age, ld:x.ld, lb:x.lb!=null?x.lb:x.ld, cy:x.cy, cb:x.cb!=null?x.cb:x.cy};
+    const c=x._c; x.seg=WD?c.segB:c.seg; x.age=WD?c.ab:c.age; x.ld=WD?c.lb:c.ld; x.cy=WD?c.cb:c.cy;
+  });
+  ["wd1","wd2"].forEach(id=>{ if($(id)) $(id).checked=WD; });
+  document.querySelectorAll("#tThr option").forEach(o=>o.textContent=o.value+(WD?" раб. дн.":" дн."));
+}
 function fmt(d){
   if(d==null||isNaN(d)) return "—";
   if(d<1) return Math.max(1,Math.round(d*24))+" ч";
-  return (d<10? d.toFixed(1).replace(".",","): Math.round(d))+" дн";
+  return (d<10? d.toFixed(1).replace(".",","): Math.round(d))+DU();
 }
 function q(arr,p){ if(!arr.length) return null; const a=[...arr].sort((x,y)=>x-y); const i=(a.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return a[lo]+(a[hi]-a[lo])*(i-lo); }
 function stat(arr,m){ if(!arr.length) return null; if(m==="avg") return arr.reduce((s,x)=>s+x,0)/arr.length; return q(arr, m==="p75"?0.75:0.5); }
@@ -318,6 +348,11 @@ $("theme").onclick=()=>{
 const PW_KEY="solarFunnelPw";
 function start(d){
   D=d; pipe=Object.keys(d.pipelines)[0];
+  applyWD();
+  ["wd1","wd2"].forEach(id=>$(id).onchange=e=>{
+    WD=e.target.checked; try{localStorage.setItem("solarWD",WD?"1":"0");}catch(_){}
+    applyWD(); render(); if(!$("tabTouch").hidden) renderTouch();
+  });
   $("lock").hidden=true; $("app").hidden=false;
   $("sub").textContent="Обновлено "+d.generated+" · сделки с движением с "+d.created_from.split("-").reverse().join(".");
   $("pipe").innerHTML=Object.keys(d.pipelines).map(p=>`<button type="button" data-p="${esc(p)}">${esc(p)}</button>`).join("");
@@ -346,7 +381,7 @@ const TB=[[0,3,"до 3 дн"],[3,7,"4–7 дн"],[7,14,"8–14 дн"],[14,30,"15
 let tPipe="", tShowAll=false;
 const tLast=x=>($("tMode").value==="out"?x.lt:Math.max(x.lt||0,x.li||0)||null);
 const tWait=x=>!!(x.li&&(!x.lt||x.li>x.lt));          // клиент писал/звонил после нашего последнего исходящего
-const tDays=x=>((D.now-(tLast(x)||x.cr))/86400);
+const tDays=x=>spanDays(tLast(x)||x.cr, D.now);
 const fdt=ts=>{const d=new Date(ts*1000); return d.toLocaleDateString("ru-RU",{timeZone:"Europe/Moscow"})+" "+d.toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit"});};
 const stName=x=>(D.open_stages[x.p]||[])[x.st]||"—";
 function tStageOrder(){
@@ -359,7 +394,6 @@ function initTouch(){
   $("tPipe").onclick=e=>{const b=e.target.closest("button"); if(!b) return; tPipe=b.dataset.p; tFill(); renderTouch();};
   ["tMgr","tStage","tThr","tHas","tMode"].forEach(id=>$(id).onchange=()=>{tShowAll=false; renderTouch();});
   $("tQ").oninput=()=>{tShowAll=false; renderTouch();};
-  document.querySelectorAll(".tLegend").forEach(el=>el.innerHTML=TB.map((b,k)=>`<span><i style="background:var(${AGEC[k]})"></i>${b[2]}</span>`).join("")+`<span><i class="none-fill"></i>касаний не было</span>`);
   tFill();
 }
 function tFill(){
@@ -387,10 +421,11 @@ function tGroupRows(el, groups, thr, order){
   el.innerHTML=!rows.length?`<div class="empty">Нет открытых сделок</div>`:
     `<div class="h"></div><div class="h">Сделки по давности касания</div><div class="h">Всего · дольше ${thr} дн · медиана</div>`+
     rows.map(r=>`<div class="stage"><span title="${esc(r.k)}">${esc(r.k)}</span></div>
-      <div class="track"><div class="stack" style="flex:0 1 ${(r.ds.length/max*100).toFixed(1)}%">${r.cnt.map((c,k)=>c?`<i style="flex:${c};background:var(${AGEC[k]})" data-tip="${esc(r.k)}\n${TB[k][2]}: ${c} сд."></i>`:"").join("")}${r.none?`<i class="none-fill" style="flex:${r.none}" data-tip="${esc(r.k)}\nкасаний не было: ${r.none} сд."></i>`:""}</div></div>
+      <div class="track"><div class="stack" style="flex:0 1 ${(r.ds.length/max*100).toFixed(1)}%">${r.cnt.map((c,k)=>c?`<i style="flex:${c};background:var(${AGEC[k]})" data-tip="${esc(r.k)}\n${lab(TB[k][2])}: ${c} сд."></i>`:"").join("")}${r.none?`<i class="none-fill" style="flex:${r.none}" data-tip="${esc(r.k)}\nкасаний не было: ${r.none} сд."></i>`:""}</div></div>
       <div class="meta"><b>${r.ds.length}</b> · <span class="${r.over?"over":"muted"}">${r.over} (${pct(r.over,r.ds.length)})</span> · ${fmt(r.med)}</div>`).join("");
 }
 function renderTouch(){
+  document.querySelectorAll(".tLegend").forEach(el=>el.innerHTML=TB.map((b,k)=>`<span><i style="background:var(${AGEC[k]})"></i>${lab(b[2])}</span>`).join("")+`<span><i class="none-fill"></i>касаний не было</span>`);
   document.querySelectorAll("#tPipe button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.p===tPipe));
   const thr=+$("tThr").value;
   if(!D.touch_field){ $("tKpis").innerHTML=""; $("tList").innerHTML=`<div class="empty">В amoCRM не найдено поле «Последнее касание».</div>`; return; }
@@ -400,7 +435,7 @@ function renderTouch(){
   const both=$("tMode").value!=="out";
   $("tKpis").innerHTML=[
     ["Открытых сделок", all.length.toLocaleString("ru"), tPipe||"Inbound и Outbound",""],
-    [`Без касания больше ${thr} дн`, over.length.toLocaleString("ru"), `${pct(over.length,all.length)} открытых сделок`,"hot"],
+    [`Без касания больше ${thr}${DU()}`, over.length.toLocaleString("ru"), `${pct(over.length,all.length)} открытых сделок`,"hot"],
     ["Клиент ждёт ответа", wait.length.toLocaleString("ru"), "писал или звонил после нашего последнего касания",""],
     ["Касаний не было", none.length.toLocaleString("ru"), both?"ни исходящих, ни входящих":"исходящих не было",""],
     ["Медиана с последнего касания", fmt(med), both?"исходящего или входящего":"исходящего",""],
@@ -415,9 +450,9 @@ function renderTouch(){
   const list=(has==="wait"
       ? ds.filter(tWait).sort((a,b)=>a.li-b.li)
       : ds.filter(x=>tDays(x)>thr && (!has || (has==="yes")===!!tLast(x))).sort((a,b)=>tDays(b)-tDays(a)));
-  $("tListTitle").textContent=(has==="wait"?"Клиент ждёт ответа":`Сделки без касания больше ${thr} дн`)+` · ${list.length}`;
+  $("tListTitle").textContent=(has==="wait"?"Клиент ждёт ответа":`Сделки без касания больше ${thr}${DU()}`)+` · ${list.length}`;
   const shown=tShowAll?list:list.slice(0,50);
-  $("tList").innerHTML=!list.length?`<div class="empty">${has==="wait"?"Нет сделок, где клиент ждёт ответа":`Нет сделок без касания дольше ${thr} дн`}</div>`:
+  $("tList").innerHTML=!list.length?`<div class="empty">${has==="wait"?"Нет сделок, где клиент ждёт ответа":`Нет сделок без касания дольше ${thr}${DU()}`}</div>`:
     `<table><thead><tr><th>Сделка</th><th>Контакт · компания</th><th>Воронка</th><th>Этап</th><th>Менеджер</th><th>Исходящее</th><th>Входящее</th><th class="n">Дней</th></tr></thead><tbody>`+
     shown.map(x=>`<tr><td class="who"><a href="${AMO}${x.id}" target="_blank" rel="noopener">${esc(x.n||("#"+x.id))}</a></td>
       <td class="who">${esc(x.ct||"—")}${x.co?`<div class="c2">${esc(x.co)}</div>`:""}</td>
@@ -434,7 +469,7 @@ function renderTouch(){
     const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
     a.download=has==="wait"?"zhdet-otveta.csv":`bez-kasaniya-${thr}d.csv`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   };
-  $("tFoot").textContent="Исходящее — поле «Последнее касание» (действие менеджера). Входящее — звонок, сообщение или письмо клиента из журнала событий amoCRM за последние "+(D.incoming_days||180)+" дн, на сделке, её контакте или компании. Дни считаются на момент обновления отчёта: "+D.generated+".";
+  $("tFoot").textContent=(WD?"Сроки в рабочих днях: суббота и воскресенье не считаются. ":"")+"Исходящее — поле «Последнее касание» (действие менеджера). Входящее — звонок, сообщение или письмо клиента из журнала событий amoCRM за последние "+(D.incoming_days||180)+" дн, на сделке, её контакте или компании. Дни считаются на момент обновления отчёта: "+D.generated+".";
 }
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function decrypt(enc,pw){
@@ -507,7 +542,8 @@ function render(){
   const work=names.slice(0,n-1);   // последний этап («Передача в аккаунтинг») — итоговый
 
   // норма по этапу (p75) — для подсветки зависших
-  const NR=(D.norms&&D.norms[pipe])||{};
+  const NR0=(D.norms&&D.norms[pipe])||{}, NR={};
+  Object.keys(NR0).forEach(k=>NR[k]=normD(NR0[k]));
   const fixed=names.map(nm=>NR[nm]||null);              // заданная норма этапа, дней
   const p75=S.map((s,i)=>fixed[i]||q(s.adv,0.75));       // норма: заданная или 75-й перцентиль
   const vals=work.map((_,i)=>stat(S[i].adv,metric));
@@ -529,14 +565,14 @@ function render(){
   $("stages").innerHTML=`<div class="h">Этап</div><div class="h">${mLabel[0].toUpperCase()+mLabel.slice(1)} времени на этапе</div><div class="h">Дальше · Отказ · Сейчас на этапе</div>`+
     work.map((nm,i)=>{
       const s=S[i], v=vals[i], ent=s.entered.size;
-      const tip=`${nm}${fixed[i]?` (норма ${fixed[i]} дн, бар — доля от нормы)`:""}\n${mLabel}: ${fmt(v)}\nмедиана ${fmt(q(s.adv,.5))} · 75% ${fmt(q(s.adv,.75))}\nпошли дальше: ${s.adv.length} из ${ent}`;
-      return `<div class="stage"><span title="${esc(nm)}">${esc(nm)}</span>${i===hot?'<em class="tag">дольше всего</em>':""}${fixed[i]?`<em class="tag norm">норма ${fixed[i]} дн</em>`:""}</div>
+      const tip=`${nm}${fixed[i]?` (норма ${fixed[i]}${DU()}, бар — доля от нормы)`:""}\n${mLabel}: ${fmt(v)}\nмедиана ${fmt(q(s.adv,.5))} · 75% ${fmt(q(s.adv,.75))}\nпошли дальше: ${s.adv.length} из ${ent}`;
+      return `<div class="stage"><span title="${esc(nm)}">${esc(nm)}</span>${i===hot?'<em class="tag">дольше всего</em>':""}${fixed[i]?`<em class="tag norm">норма ${fixed[i]}${DU()}</em>`:""}</div>
       <div class="track" data-tip="${esc(tip)}">${v==null?'<span class="muted">нет переходов</span>':`<div class="bar${i===hot?" hot":""}" style="flex:0 1 ${Math.min(100,v/(fixed[i]?Math.max(fixed[i],v):max)*100).toFixed(1)}%;${s.adv.length<3?"opacity:.4":""}${fixed[i]?";background:var(--bar-norm)":""}"></div><span class="bv">${fmt(v)}${s.adv.length<3?` <span class="muted" style="font-weight:500">· ${s.adv.length} сд.</span>`:""}</span>`}</div>
       <div class="meta"><b>${s.adv.length}</b> (${pct(s.adv.length,ent)}) · <b>${s.lost.length}</b> (${pct(s.lost.length,ent)}) · <b>${s.open}</b></div>`;
     }).join("");
 
   // Возраст открытых
-  $("ageLegend").innerHTML=AGE.map((a,k)=>`<span><i style="background:var(${AGEC[k]})"></i>${a[2]}</span>`).join("");
+  $("ageLegend").innerHTML=AGE.map((a,k)=>`<span><i style="background:var(${AGEC[k]})"></i>${lab(a[2])}</span>`).join("");
   const maxOpen=Math.max(...work.map((_,i)=>S[i].open),1);
   const anyOpen=work.some((_,i)=>S[i].open);
   $("ages").innerHTML=!anyOpen? `<div class="empty">Нет открытых сделок в выборке</div>` :
@@ -547,8 +583,8 @@ function render(){
       const unk=s.open-s.ages.length;
       const w=s.open/maxOpen*100;
       return `<div class="stage"><span title="${esc(nm)}">${esc(nm)}</span></div>
-      <div class="track"><div class="stack" style="flex:0 1 ${w.toFixed(1)}%">${cnt.map((c,k)=>c?`<i style="flex:${c};background:var(${AGEC[k]})" data-tip="${esc(nm)}\n${AGE[k][2]}: ${c} сд."></i>`:"").join("")}${unk?`<i style="flex:${unk};background:var(--hm0)" data-tip="${esc(nm)}\nдата входа неизвестна: ${unk} сд."></i>`:""}</div></div>
-      <div class="meta"><b>${s.open}</b> · ${fmt(q(s.ages,.5))}${NR[nm]?` · <span class="${s.ages.some(a=>a>NR[nm])?"over":"muted"}">сверх нормы ${NR[nm]} дн: ${s.ages.filter(a=>a>NR[nm]).length}</span>`:""}${unk?` <span class="muted">· ${unk} без даты</span>`:""}</div>`;
+      <div class="track"><div class="stack" style="flex:0 1 ${w.toFixed(1)}%">${cnt.map((c,k)=>c?`<i style="flex:${c};background:var(${AGEC[k]})" data-tip="${esc(nm)}\n${lab(AGE[k][2])}: ${c} сд."></i>`:"").join("")}${unk?`<i style="flex:${unk};background:var(--hm0)" data-tip="${esc(nm)}\nдата входа неизвестна: ${unk} сд."></i>`:""}</div></div>
+      <div class="meta"><b>${s.open}</b> · ${fmt(q(s.ages,.5))}${NR[nm]?` · <span class="${s.ages.some(a=>a>NR[nm])?"over":"muted"}">сверх нормы ${NR[nm]}${DU()}: ${s.ages.filter(a=>a>NR[nm]).length}</span>`:""}${unk?` <span class="muted">· ${unk} без даты</span>`:""}</div>`;
     }).join("");
 
   // Зависшие
@@ -581,11 +617,11 @@ function render(){
       if(!c.k) return `<td class="c muted">—</td>`;
       if(c.k<3) return `<td class="c muted" data-tip="${esc(r.m)} · ${esc(work[i])}\n${fmt(c.v)}, всего ${c.k} сд.">·</td>`;
       const k=shade(c.v,i), dark=k>=3;
-      return `<td class="c" style="background:var(${HMC[k]});color:${dark?"var(--hm-ink)":"var(--text)"}" data-tip="${esc(r.m)} · ${esc(work[i])}\n${mLabel}: ${fmt(c.v)}\nпереходов: ${c.k}">${fmt(c.v).replace(" дн","").replace(" ч","ч")}</td>`;}).join("")}</tr>`).join("")+
+      return `<td class="c" style="background:var(${HMC[k]});color:${dark?"var(--hm-ink)":"var(--text)"}" data-tip="${esc(r.m)} · ${esc(work[i])}\n${mLabel}: ${fmt(c.v)}\nпереходов: ${c.k}">${fmt(c.v).replace(/ (р\.)?дн$/,"").replace(/ (р\.)?ч$/,"ч")}</td>`;}).join("")}</tr>`).join("")+
     `</tbody></table>`;
 
   const an=deals.reduce((s,x)=>s+(x.an||0),0);
-  $("foot").textContent=`Даты берутся из полей «Дата перехода» только той воронки, в которой сделка находится сейчас. Вход на «${names[0]}» — дата создания сделки (для сделок, созданных до ${D.created_from.split("-").reverse().join(".")}, время на этом этапе не считается).`+(an?` Пропущено ${an} дат, которые раньше предыдущего этапа (возвраты назад).`:"");
+  $("foot").textContent=(WD?`Сроки в рабочих днях: суббота и воскресенье не считаются, норма «${Object.keys(NR0)[0]||"—"}» пересчитана в рабочие дни (${Object.values(NR0)[0]||""} календарных → ${Object.values(NR)[0]||""} рабочих). `:"")+`Даты берутся из полей «Дата перехода» только той воронки, в которой сделка находится сейчас. Вход на «${names[0]}» — дата создания сделки (для сделок, созданных до ${D.created_from.split("-").reverse().join(".")}, время на этом этапе не считается).`+(an?` Пропущено ${an} дат, которые раньше предыдущего этапа (возвраты назад).`:"");
 }
 
 // tooltip

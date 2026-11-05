@@ -93,6 +93,21 @@ def paginate(path, params, key):
         p = None
 
 
+def biz_days(t0, t1):
+    """Длительность в рабочих днях между двумя моментами: часы субботы и воскресенья (по МСК) не считаются."""
+    if t0 is None or t1 is None or t1 <= t0:
+        return 0.0
+    a, b = t0 + 10800, t1 + 10800            # в московское время
+    da, db = a // 86400, b // 86400
+    wd = lambda d: (d + 3) % 7 < 5           # 01.01.1970 — четверг; пн..пт
+    if da == db:
+        return (b - a) / 86400 if wd(da) else 0.0
+    sec = ((da + 1) * 86400 - a if wd(da) else 0) + (b - db * 86400 if wd(db) else 0)
+    n = db - da - 1
+    full = n // 7 * 5 + sum(1 for d in range(da + 1 + n // 7 * 7, db) if wd(d))
+    return full + sec / 86400
+
+
 def norm(s):
     return " ".join(str(s).lower().replace("ё", "е").split())
 
@@ -268,33 +283,37 @@ def lead_record(lead, kw, m, users, now):
             continue
         if prev is not None:
             if ts >= entries[prev]:
-                seg.append([prev, round((ts - entries[prev]) / 86400, 3), i])
+                seg.append([prev, round((ts - entries[prev]) / 86400, 3), i,
+                            round(biz_days(entries[prev], ts), 3)])
                 prev = i
             else:
                 anomalies += 1
             continue
         prev = i
 
-    lost_from = lost_days = None
+    lost_from = lost_days = lost_bdays = None
     if state == "lost" and prev is not None:
         lts = cf.get(m["lost_field"]) if m["lost_field"] else None
         if lts is None:
             lts = lead.get("closed_at")
         if lts and lts >= entries[prev]:
             lost_from, lost_days = prev, round((lts - entries[prev]) / 86400, 3)
+            lost_bdays = round(biz_days(entries[prev], lts), 3)
 
-    cur = age = None
+    cur = age = age_b = None
     if state == "open":
         idx = next((i for i, s in enumerate(stages) if s["id"] == status), None)
         if idx is not None:
             cur = idx
             if entries[idx]:
                 age = round((now - entries[idx]) / 86400, 3)
+                age_b = round(biz_days(entries[idx], now), 3)
 
-    cycle = None
+    cycle = cycle_b = None
     won_idx = next((i for i, s in enumerate(stages) if s["id"] == WON), None)
     if state == "won" and won_idx is not None and entries[won_idx]:
         cycle = round((entries[won_idx] - lead["created_at"]) / 86400, 3)
+        cycle_b = round(biz_days(lead["created_at"], entries[won_idx]), 3)
 
     own = [t for t in entries if t] + ([cf[m["lost_field"]]] if m["lost_field"] and m["lost_field"] in cf else [])
     active = min([t for t in own if t >= FROM_TS], default=None)
@@ -309,10 +328,10 @@ def lead_record(lead, kw, m, users, now):
         "c": datetime.fromtimestamp(lead["created_at"], MSK).strftime("%Y-%m-%d"),
         "d": datetime.fromtimestamp(d_ts, MSK).strftime("%Y-%m-%d"),  # дата в периоде: создание или первый переход с начала истории
         "s": state,
-        "seg": seg,                       # [индекс этапа, дней на этапе, индекс следующего этапа]
-        "lf": lost_from, "ld": lost_days,  # с какого этапа отказ и сколько дней до отказа
-        "cur": cur, "age": age,           # открытые: текущий этап и дней на нём
-        "cy": cycle,                      # успешные: дней от создания до «Передача в аккаунтинг»
+        "seg": seg,                       # [индекс этапа, дней на этапе, индекс следующего этапа, рабочих дней]
+        "lf": lost_from, "ld": lost_days, "lb": lost_bdays,  # отказ: с какого этапа, дней / рабочих дней до отказа
+        "cur": cur, "age": age, "ab": age_b,  # открытые: текущий этап, дней / рабочих дней на нём
+        "cy": cycle, "cb": cycle_b,       # успешные: от создания до «Передача в аккаунтинг», дней / рабочих дней
         "an": anomalies,
     }
 

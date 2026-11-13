@@ -17,7 +17,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +36,16 @@ jobs:
         run: |
           python build_report.py
           test ! -e docs/data.json   # открытые данные не публикуем
+
+      - name: Build sales dashboard (docs/sales)
+        env:
+          AMO_TOKEN: ${{ secrets.AMO_TOKEN }}
+          REPORT_PASSWORD: ${{ secrets.REPORT_PASSWORD }}
+          REQUIRE_ENCRYPTION: "1"
+        run: |
+          # при неполной загрузке скрипт оставляет последний полный срез и пишет статус в docs/sales/status.json
+          python build_sales.py
+          test ! -e docs/sales/data.json
 
       - uses: actions/upload-pages-artifact@v3
         with:

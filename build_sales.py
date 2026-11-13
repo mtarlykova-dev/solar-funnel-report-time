@@ -176,8 +176,9 @@ def build():
     for l in leads:
         lid, cur = l["id"], l["status_id"]
         fi = dict(first_in.get(lid, {}))
-        # запасной источник: поля «Дата перехода»
-        for i, fid in trans_fid.items():
+        # запасной источник: поля «Дата перехода» — только если в журнале событий по сделке ничего нет
+        # (иначе журнал главнее: поля бывают заполнены ошибочно, например у 34286915)
+        for i, fid in (trans_fid.items() if lid not in first_in else ()):
             v = ts_or_none(cfv(l, fid))
             if v and i not in fi:
                 fi[i] = v

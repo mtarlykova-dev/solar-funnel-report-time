@@ -15,6 +15,9 @@
 Вкладка «Последнее касание»: все открытые сделки Inbound/Outbound (любой даты создания) —
 значение поля «Последнее касание», менеджер, этап, название сделки, основной контакт и компания.
 
+Вкладка «Партнёры» (partners_data.py): партнёры из воронки «Партнерство» и их лиды
+(«Партнерство: лидогенерация», Inbound, Маркетинг) с текущим этапом.
+
 Данные публикуются только в зашифрованном виде (секрет REPORT_PASSWORD).
 
 Запуск: AMO_TOKEN=... python build_report.py
@@ -419,7 +422,16 @@ def main():
         t["co"] = onames.get(t["co"], "") if t["co"] else ""
         del t["_cts"], t["_cos"]
 
+    # вкладка «Партнёры»: партнёры и их лиды (ошибка здесь не должна ломать остальной отчёт)
+    try:
+        import partners_data
+        partners = partners_data.build(api, paginate, users, MSK, names_by_id)
+    except Exception as e:
+        print(f"! Вкладка «Партнёры» не собрана: {e.__class__.__name__}: {e}")
+        partners = None
+
     out = {
+        "partners": partners,
         "generated": datetime.fromtimestamp(now, MSK).strftime("%d.%m.%Y %H:%M"),
         "created_from": CREATED_FROM.strftime("%Y-%m-%d"),
         "pipelines": {kw: [s["name"] for s in m["stages"]] for kw, m in meta.items()},

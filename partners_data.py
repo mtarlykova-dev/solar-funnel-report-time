@@ -43,6 +43,13 @@ def _code(v):
     return m.group(0) if m else None
 
 
+def _ref_code(lead):
+    """Код из поля referrer — только если там одно число (лиды из виджета партнёра).
+    Обычная ссылка (https://…?ysclid=…) кодом не считается, даже если в ней есть цифры."""
+    v = str(_cf(lead, F_REFERRER) or "").strip()
+    return v if re.fullmatch(r"\d{6,}", v) else None
+
+
 def _link_company(lead):
     raw = _cf(lead, F_PARTNER_LINK)
     if not raw:
@@ -108,10 +115,9 @@ def build(api, paginate, users, msk, names_by_id):
             if not p:
                 is_partner = "partner" in (str(_cf(l, F_UTM_SOURCE) or "").lower(),
                                            str(_cf(l, F_LAST_UTM_SOURCE) or "").lower()) \
-                    or _code(_cf(l, F_REFERRER)) is not None
+                    or _ref_code(l) is not None
                 if is_partner:
-                    for fid in (F_UTM_MEDIUM, F_LAST_UTM_MEDIUM, F_REFERRER):
-                        c = _code(_cf(l, fid))
+                    for c in (_code(_cf(l, F_UTM_MEDIUM)), _code(_cf(l, F_LAST_UTM_MEDIUM)), _ref_code(l)):
                         if c and c in by_code:
                             p, via = by_code[c], "utm"
                             break

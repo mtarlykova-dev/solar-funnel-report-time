@@ -357,7 +357,7 @@ const AMO="https://solarstaff.amocrm.ru/leads/detail/";
 const RUN_URL="https://github.com/mtarlykova-dev/solar-funnel-report-time/actions/workflows/report.yml";
 const PW_KEY="solarFunnelPw";
 const SECTIONS=[["overview","Обзор"],["managers","Менеджеры"],["funnel","Воронка"],["cohorts","Когорты"],["past","Прошлые периоды"],["cr","Переходы и CR"],["bottle","Узкие места"],["speed","Скорость"],["load","Нагрузка"],["quality","Качество лидов"],["rop","Отчёт РОП"],["cac","CAC"],["control","Контроль"],["method","Методика"]];
-const MAIN=["Егор Гырман","Дмитрий Леонов"];
+let MAIN=["Егор Гырман","Дмитрий Леонов","Эмилия Этер"];  // менеджеры Inbound: отдельные пункты в фильтре и колонки в таблицах
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const nf=n=>n==null?"—":Number(n).toLocaleString("ru");
@@ -440,6 +440,9 @@ function start(d){
   // фильтры
   $("fFrom").value=D.from; $("fFrom").min=D.from; $("fTo").value=cutDate; $("fTo").max=cutDate;
   const mc={}; D.leads.forEach(l=>{ if(l.c>=D.fromTs) mc[l.m]=(mc[l.m]||0)+1; });
+  // имя в amoCRM может быть записано чуть иначе — сверяем по фамилии
+  const names=[...new Set(D.leads.map(l=>l.m))];
+  MAIN=MAIN.map(m=>names.includes(m)?m:(names.find(n=>n.toLowerCase().includes(m.split(" ").pop().toLowerCase()))||m));
   $("fMgr").innerHTML=`<option value="">Вся команда</option>`+MAIN.map(m=>`<option>${esc(m)}</option>`).join("")+`<option value="__other">Остальные</option>`;
   const sc={}; D.leads.forEach(l=>{ if(l.c>=D.fromTs&&l.src) sc[l.src]=(sc[l.src]||0)+1; });
   $("fSrc").innerHTML=`<option value="">Все</option>`+Object.keys(sc).sort((a,b)=>sc[b]-sc[a]).map(s=>`<option>${esc(s)}</option>`).join("")+`<option value="__none">Не указан</option>`;
